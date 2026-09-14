@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+echo "Spider OS Core starting..."
+
+while true; do
+    sleep 300
+done
