@@ -1,57 +1,30 @@
-# Core operating system
-linux-generic
-systemd
-dbus
-sudo
+# Spider OS additions to the existing Ubuntu Studio base.
+# Do NOT reinstall Kubuntu or Ubuntu Studio desktop metapackages here.
+
+ca-certificates
 curl
 wget
 git
-rsync
 jq
-unzip
-zip
-ca-certificates
-software-properties-common
-
-# KDE / native desktop
-kubuntu-desktop
-plasma-workspace
-plasma-discover
-konsole
-dolphin
-kate
-
-# Audio stack
-pipewire
-pipewire-audio
-wireplumber
-pavucontrol
-
-# Ubuntu Studio creative stack
-ubuntustudio-desktop
-ubuntustudio-audio
-ubuntustudio-graphics
-ubuntustudio-photography
-ubuntustudio-video
-
-# Development
-build-essential
-python3
-python3-pip
-python3-venv
-nodejs
-npm
-
-# Spider OS support
+rsync
 sqlite3
 ripgrep
 fd-find
 inotify-tools
 
-# Isolation / Kali Bay support
+python3
+python3-pip
+python3-venv
+
+speech-dispatcher
+espeak-ng
+
 podman
 distrobox
+
 qemu-system-x86
 qemu-utils
 libvirt-daemon-system
+libvirt-clients
 virt-manager
+bridge-utils

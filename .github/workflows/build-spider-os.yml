@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout Spider OS
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Free build disk space
         run: |
@@ -25,6 +25,16 @@ jobs:
           docker system prune -af || true
           sudo apt-get clean
           df -h
+
+      - name: Validate Spider OS scripts
+        run: |
+          bash -n distro/build-iso.sh
+          test -f distro/packages/spider-os-packages.list
+          test -f distro/systemd/spider-os.service
+          test -f webbie/service/webbie.service
+          test -x spider-core/bin/spider-core
+          test -x webbie/webbie
+          test -x webbie/agent/webbie.py
 
       - name: Install ISO build tools
         run: |
@@ -49,27 +59,42 @@ jobs:
             -indev build/Spider_OS_24.04.5_amd64.iso \
             -report_el_torito plain
 
-      - name: Split ISO for GitHub Release
+      - name: Split ISO for release
         run: |
           cd build
 
           split \
             -b 1900M \
             -d \
-            -a 2 \
+            -a 3 \
             Spider_OS_24.04.5_amd64.iso \
             Spider_OS_24.04.5_amd64.iso.part-
 
           cat > REASSEMBLE.txt <<'TXT'
-          Spider OS ISO Reassembly
+          SPIDER OS ISO REASSEMBLY
 
-          Linux:
-          cat Spider_OS_24.04.5_amd64.iso.part-* > Spider_OS_24.04.5_amd64.iso
+          Linux/macOS:
+          cat Spider_OS_24.04.5_amd64.iso.part-* \
+            > Spider_OS_24.04.5_amd64.iso
 
-          Windows Command Prompt:
-          copy /b Spider_OS_24.04.5_amd64.iso.part-00+Spider_OS_24.04.5_amd64.iso.part-01+Spider_OS_24.04.5_amd64.iso.part-02+Spider_OS_24.04.5_amd64.iso.part-03+Spider_OS_24.04.5_amd64.iso.part-04 Spider_OS_24.04.5_amd64.iso
+          Windows PowerShell:
 
-          After rebuilding the ISO, verify it against:
+          $parts = Get-ChildItem "Spider_OS_24.04.5_amd64.iso.part-*" |
+              Sort-Object Name
+
+          $output = [System.IO.File]::Create(
+              "Spider_OS_24.04.5_amd64.iso"
+          )
+
+          foreach ($part in $parts) {
+              $input = [System.IO.File]::OpenRead($part.FullName)
+              $input.CopyTo($output)
+              $input.Dispose()
+          }
+
+          $output.Dispose()
+
+          Then verify Spider_OS_24.04.5_amd64.iso against:
           Spider_OS_24.04.5_amd64.iso.sha256
           TXT
 
@@ -81,12 +106,17 @@ jobs:
         run: |
           TAG="spider-os-build-${GITHUB_RUN_NUMBER}"
 
-          gh release create "${TAG}" \
-            --title "Spider OS Native Build ${GITHUB_RUN_NUMBER}" \
-            --notes "Native Spider OS development build based on Ubuntu Studio 24.04.5." \
-            --prerelease
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release already exists; updating assets."
+          else
+            gh release create "${TAG}" \
+              --title "Spider OS Native Build ${GITHUB_RUN_NUMBER}" \
+              --notes "Native Spider OS development build based on Ubuntu Studio 24.04.5." \
+              --prerelease
+          fi
 
           gh release upload "${TAG}" \
             build/Spider_OS_24.04.5_amd64.iso.part-* \
             build/Spider_OS_24.04.5_amd64.iso.sha256 \
-            build/REASSEMBLE.txt
+            build/REASSEMBLE.txt \
+            --clobber
