@@ -73,7 +73,7 @@ rm -rf "${ISO_TREE}"
 mkdir -p "${ISO_TREE}"
 
 rsync -aH \
-    --exclude="/casper/standard.live.squashfs" \
+    --exclude="/casper/standard.squashfs" \
     "${ISO_MOUNT}/" \
     "${ISO_TREE}/"
 
@@ -81,33 +81,19 @@ echo "Extracting layered Ubuntu Studio filesystem..."
 
 rm -rf "${ROOTFS}"
 
-BASE_LAYER="${ISO_MOUNT}/casper/standard.squashfs"
-LIVE_LAYER="${ISO_MOUNT}/casper/standard.live.squashfs"
+STANDARD_LAYER="${ISO_MOUNT}/casper/standard.squashfs"
 
-if [[ ! -f "${BASE_LAYER}" ]]; then
-    echo "ERROR: Missing Ubuntu Studio base layer: ${BASE_LAYER}"
+if [[ ! -f "${STANDARD_LAYER}" ]]; then
+    echo "ERROR: Missing Ubuntu Studio install layer: ${STANDARD_LAYER}"
     ls -lah "${ISO_MOUNT}/casper/"
     exit 1
 fi
 
-if [[ ! -f "${LIVE_LAYER}" ]]; then
-    echo "ERROR: Missing Ubuntu Studio live layer: ${LIVE_LAYER}"
-    ls -lah "${ISO_MOUNT}/casper/"
-    exit 1
-fi
-
-echo "Extracting standard.squashfs..."
+echo "Extracting Ubuntu Studio installed-system layer..."
 
 unsquashfs \
     -d "${ROOTFS}" \
-    "${BASE_LAYER}"
-
-echo "Applying standard.live.squashfs..."
-
-unsquashfs \
-    -f \
-    -d "${ROOTFS}" \
-    "${LIVE_LAYER}"
+    "${STANDARD_LAYER}"
 
 umount "${ISO_MOUNT}"
 
@@ -215,33 +201,37 @@ systemctl \
     --global \
     enable webbie.service
 
-echo "Updating live filesystem metadata..."
+echo "Updating Spider OS filesystem metadata..."
 
 chroot "${ROOTFS}" \
     dpkg-query \
     -W \
     --showformat='${Package} ${Version}\n' \
-    > "${ISO_TREE}/casper/filesystem.manifest"
+    > "${ISO_TREE}/casper/standard.manifest"
 
+# Keep the overall manifest synchronized with the installed-system layer.
 cp \
-    "${ISO_TREE}/casper/filesystem.manifest" \
-    "${ISO_TREE}/casper/standard.live.manifest"
+    "${ISO_TREE}/casper/standard.manifest" \
+    "${ISO_TREE}/casper/filesystem.manifest"
 
-ROOTFS_SIZE="$(du -sx --block-size=1 "${ROOTFS}" | cut -f1)"
+ROOTFS_SIZE="$(
+    du -sx --block-size=1 "${ROOTFS}" |
+    cut -f1
+)"
+
+printf '%s\n' "${ROOTFS_SIZE}" \
+    > "${ISO_TREE}/casper/standard.size"
 
 printf '%s\n' "${ROOTFS_SIZE}" \
     > "${ISO_TREE}/casper/filesystem.size"
 
-printf '%s\n' "${ROOTFS_SIZE}" \
-    > "${ISO_TREE}/casper/standard.live.size"
+echo "Creating Spider OS standard.squashfs..."
 
-echo "Creating new compressed Spider OS live layer..."
-
-rm -f "${ISO_TREE}/casper/standard.live.squashfs"
+rm -f "${ISO_TREE}/casper/standard.squashfs"
 
 mksquashfs \
     "${ROOTFS}" \
-    "${ISO_TREE}/casper/standard.live.squashfs" \
+    "${ISO_TREE}/casper/standard.squashfs" \
     -comp zstd \
     -noappend
 
