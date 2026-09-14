@@ -162,7 +162,7 @@ mount -t proc proc "${ROOTFS}/proc"
 mount -t sysfs sys "${ROOTFS}/sys"
 mount --bind /run "${ROOTFS}/run"
 
-cp -L /etc/resolv.conf "${ROOTFS}/etc/resolv.conf"
+# /run is bind-mounted, so the chroot already has resolver access.
 
 echo "Installing Spider OS dependencies..."
 
