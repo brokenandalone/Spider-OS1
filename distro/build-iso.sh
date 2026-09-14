@@ -59,7 +59,7 @@ curl -fsSL "${SUMS_URL}" -o "${BUILD}/SHA256SUMS.upstream"
 
 (
     cd "${BUILD}"
-    grep " ${BASE_NAME}$" SHA256SUMS.upstream > SHA256SUMS.verify
+    grep -F -- "*${BASE_NAME}" SHA256SUMS.upstream > SHA256SUMS.verify
     sha256sum -c SHA256SUMS.verify
 )
 
