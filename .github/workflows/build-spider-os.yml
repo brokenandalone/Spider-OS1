@@ -1,0 +1,92 @@
+name: Build Native Spider OS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-spider-os:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+
+    steps:
+      - name: Checkout Spider OS
+        uses: actions/checkout@v4
+
+      - name: Free build disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf "${AGENT_TOOLSDIRECTORY}" || true
+          docker system prune -af || true
+          sudo apt-get clean
+          df -h
+
+      - name: Install ISO build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl \
+            rsync \
+            squashfs-tools \
+            xorriso \
+            qemu-system-x86 \
+            ovmf
+
+      - name: Build Spider OS
+        run: |
+          sudo -E ./distro/build-iso.sh
+
+      - name: Inspect completed ISO
+        run: |
+          ls -lh build/
+          cat build/Spider_OS_24.04.5_amd64.iso.sha256
+          xorriso \
+            -indev build/Spider_OS_24.04.5_amd64.iso \
+            -report_el_torito plain
+
+      - name: Split ISO for GitHub Release
+        run: |
+          cd build
+
+          split \
+            -b 1900M \
+            -d \
+            -a 2 \
+            Spider_OS_24.04.5_amd64.iso \
+            Spider_OS_24.04.5_amd64.iso.part-
+
+          cat > REASSEMBLE.txt <<'TXT'
+          Spider OS ISO Reassembly
+
+          Linux:
+          cat Spider_OS_24.04.5_amd64.iso.part-* > Spider_OS_24.04.5_amd64.iso
+
+          Windows Command Prompt:
+          copy /b Spider_OS_24.04.5_amd64.iso.part-00+Spider_OS_24.04.5_amd64.iso.part-01+Spider_OS_24.04.5_amd64.iso.part-02+Spider_OS_24.04.5_amd64.iso.part-03+Spider_OS_24.04.5_amd64.iso.part-04 Spider_OS_24.04.5_amd64.iso
+
+          After rebuilding the ISO, verify it against:
+          Spider_OS_24.04.5_amd64.iso.sha256
+          TXT
+
+          ls -lh Spider_OS_24.04.5_amd64.iso.part-*
+
+      - name: Publish Spider OS build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="spider-os-build-${GITHUB_RUN_NUMBER}"
+
+          gh release create "${TAG}" \
+            --title "Spider OS Native Build ${GITHUB_RUN_NUMBER}" \
+            --notes "Native Spider OS development build based on Ubuntu Studio 24.04.5." \
+            --prerelease
+
+          gh release upload "${TAG}" \
+            build/Spider_OS_24.04.5_amd64.iso.part-* \
+            build/Spider_OS_24.04.5_amd64.iso.sha256 \
+            build/REASSEMBLE.txt
