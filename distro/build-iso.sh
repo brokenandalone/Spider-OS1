@@ -73,17 +73,41 @@ rm -rf "${ISO_TREE}"
 mkdir -p "${ISO_TREE}"
 
 rsync -aH \
-    --exclude="/casper/filesystem.squashfs" \
+    --exclude="/casper/standard.live.squashfs" \
     "${ISO_MOUNT}/" \
     "${ISO_TREE}/"
 
-echo "Extracting live Linux filesystem..."
+echo "Extracting layered Ubuntu Studio filesystem..."
 
 rm -rf "${ROOTFS}"
 
+BASE_LAYER="${ISO_MOUNT}/casper/standard.squashfs"
+LIVE_LAYER="${ISO_MOUNT}/casper/standard.live.squashfs"
+
+if [[ ! -f "${BASE_LAYER}" ]]; then
+    echo "ERROR: Missing Ubuntu Studio base layer: ${BASE_LAYER}"
+    ls -lah "${ISO_MOUNT}/casper/"
+    exit 1
+fi
+
+if [[ ! -f "${LIVE_LAYER}" ]]; then
+    echo "ERROR: Missing Ubuntu Studio live layer: ${LIVE_LAYER}"
+    ls -lah "${ISO_MOUNT}/casper/"
+    exit 1
+fi
+
+echo "Extracting standard.squashfs..."
+
 unsquashfs \
     -d "${ROOTFS}" \
-    "${ISO_MOUNT}/casper/filesystem.squashfs"
+    "${BASE_LAYER}"
+
+echo "Applying standard.live.squashfs..."
+
+unsquashfs \
+    -f \
+    -d "${ROOTFS}" \
+    "${LIVE_LAYER}"
 
 umount "${ISO_MOUNT}"
 
@@ -199,19 +223,47 @@ chroot "${ROOTFS}" \
     --showformat='${Package} ${Version}\n' \
     > "${ISO_TREE}/casper/filesystem.manifest"
 
-du -sx --block-size=1 "${ROOTFS}" \
-    | cut -f1 \
+cp \
+    "${ISO_TREE}/casper/filesystem.manifest" \
+    "${ISO_TREE}/casper/standard.live.manifest"
+
+ROOTFS_SIZE="$(du -sx --block-size=1 "${ROOTFS}" | cut -f1)"
+
+printf '%s\n' "${ROOTFS_SIZE}" \
     > "${ISO_TREE}/casper/filesystem.size"
 
-echo "Creating new compressed Spider OS filesystem..."
+printf '%s\n' "${ROOTFS_SIZE}" \
+    > "${ISO_TREE}/casper/standard.live.size"
 
-rm -f "${ISO_TREE}/casper/filesystem.squashfs"
+echo "Creating new compressed Spider OS live layer..."
+
+rm -f "${ISO_TREE}/casper/standard.live.squashfs"
 
 mksquashfs \
     "${ROOTFS}" \
-    "${ISO_TREE}/casper/filesystem.squashfs" \
+    "${ISO_TREE}/casper/standard.live.squashfs" \
     -comp zstd \
     -noappend
+
+echo "Updating Casper SHA256 checksums..."
+
+rm -f \
+    "${ISO_TREE}/casper/SHA256SUMS" \
+    "${ISO_TREE}/casper/SHA256SUMS.gpg"
+
+(
+    cd "${ISO_TREE}/casper"
+
+    find . \
+        -maxdepth 1 \
+        -type f \
+        ! -name SHA256SUMS \
+        ! -name SHA256SUMS.gpg \
+        -printf '%P\0' \
+        | sort -z \
+        | xargs -0 sha256sum \
+        > SHA256SUMS
+)
 
 echo "Removing temporary uncompressed root filesystem..."
 
