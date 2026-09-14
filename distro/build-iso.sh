@@ -121,9 +121,13 @@ rsync -a \
     "${ROOT}/kali-bay/" \
     "${ROOTFS}/usr/local/lib/spider-os/kali-bay/"
 
-rsync -a \
-    "${ROOT}/branding/" \
-    "${ROOTFS}/usr/local/lib/spider-os/branding/"
+install -d "${ROOTFS}/usr/local/lib/spider-os/branding"
+
+if [[ -d "${ROOT}/branding" ]]; then
+    rsync -a \
+        "${ROOT}/branding/" \
+        "${ROOTFS}/usr/local/lib/spider-os/branding/"
+fi
 
 install -Dm644 \
     "${ROOT}/distro/systemd/spider-os.service" \
