@@ -20,10 +20,10 @@ OUTPUT="${BUILD}/Spider_OS_${BASE_VERSION}_amd64.iso"
 cleanup() {
     set +e
 
-    mountpoint -q "${ROOTFS}/dev"  && umount -l "${ROOTFS}/dev"
+    mountpoint -q "${ROOTFS}/dev"  && umount -R -l "${ROOTFS}/dev"
     mountpoint -q "${ROOTFS}/proc" && umount -l "${ROOTFS}/proc"
     mountpoint -q "${ROOTFS}/sys"  && umount -l "${ROOTFS}/sys"
-    mountpoint -q "${ROOTFS}/run"  && umount -l "${ROOTFS}/run"
+    mountpoint -q "${ROOTFS}/run"  && umount -R -l "${ROOTFS}/run"
     mountpoint -q "${ISO_MOUNT}"   && umount -l "${ISO_MOUNT}"
 }
 
@@ -157,10 +157,14 @@ RELEASE
 
 echo "Preparing chroot..."
 
-mount --bind /dev "${ROOTFS}/dev"
+mount --rbind /dev "${ROOTFS}/dev"
+mount --make-rslave "${ROOTFS}/dev"
+
 mount -t proc proc "${ROOTFS}/proc"
 mount -t sysfs sys "${ROOTFS}/sys"
-mount --bind /run "${ROOTFS}/run"
+
+mount --rbind /run "${ROOTFS}/run"
+mount --make-rslave "${ROOTFS}/run"
 
 # /run is bind-mounted, so the chroot already has resolver access.
 
@@ -170,6 +174,12 @@ chroot "${ROOTFS}" /bin/bash <<'CHROOT'
 set -Eeuo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
+
+if [[ -f /etc/apt/sources.list.d/dvd.list ]]; then
+    mv \
+        /etc/apt/sources.list.d/dvd.list \
+        /etc/apt/sources.list.d/dvd.list.spider-disabled
+fi
 
 apt-get update
 

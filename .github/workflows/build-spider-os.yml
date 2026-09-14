@@ -51,6 +51,11 @@ jobs:
         run: |
           sudo -E ./distro/build-iso.sh
 
+      - name: Return build files to runner
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" build
+          chmod -R u+rwX build
+
       - name: Inspect completed ISO
         run: |
           ls -lh build/
