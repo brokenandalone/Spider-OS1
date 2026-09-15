@@ -14,6 +14,7 @@ BASE_ISO="${BUILD}/${BASE_NAME}"
 ISO_MOUNT="${BUILD}/iso-mount"
 ISO_TREE="${BUILD}/iso-tree"
 ROOTFS="${BUILD}/rootfs"
+LIVE_ROOTFS="${BUILD}/live-rootfs"
 
 OUTPUT="${BUILD}/Spider_OS_${BASE_VERSION}_amd64.iso"
 
@@ -74,6 +75,7 @@ mkdir -p "${ISO_TREE}"
 
 rsync -aH \
     --exclude="/casper/standard.squashfs" \
+    --exclude="/casper/standard.live.squashfs" \
     "${ISO_MOUNT}/" \
     "${ISO_TREE}/"
 
@@ -82,9 +84,16 @@ echo "Extracting layered Ubuntu Studio filesystem..."
 rm -rf "${ROOTFS}"
 
 STANDARD_LAYER="${ISO_MOUNT}/casper/standard.squashfs"
+LIVE_LAYER="${ISO_MOUNT}/casper/standard.live.squashfs"
 
 if [[ ! -f "${STANDARD_LAYER}" ]]; then
     echo "ERROR: Missing Ubuntu Studio install layer: ${STANDARD_LAYER}"
+    ls -lah "${ISO_MOUNT}/casper/"
+    exit 1
+fi
+
+if [[ ! -f "${LIVE_LAYER}" ]]; then
+    echo "ERROR: Missing Ubuntu Studio live-session layer: ${LIVE_LAYER}"
     ls -lah "${ISO_MOUNT}/casper/"
     exit 1
 fi
@@ -94,6 +103,14 @@ echo "Extracting Ubuntu Studio installed-system layer..."
 unsquashfs \
     -d "${ROOTFS}" \
     "${STANDARD_LAYER}"
+
+echo "Extracting Ubuntu Studio live-session layer..."
+
+rm -rf "${LIVE_ROOTFS}"
+
+unsquashfs \
+    -d "${LIVE_ROOTFS}" \
+    "${LIVE_LAYER}"
 
 umount "${ISO_MOUNT}"
 
@@ -243,6 +260,333 @@ echo "Creating Spider OS standard.squashfs..."
 
 rm -f "${ISO_TREE}/casper/standard.squashfs"
 
+
+
+SPIDER_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+
+echo "Installing Spider OS system identity..."
+
+cat > "${ROOTFS}/etc/os-release" <<'SPIDER_OS_RELEASE'
+NAME="Spider OS"
+PRETTY_NAME="Spider OS 0.1"
+ID=ubuntu
+ID_LIKE=debian
+VERSION_ID="24.04"
+VERSION="0.1 (Ubuntu 24.04 LTS base)"
+VERSION_CODENAME=noble
+UBUNTU_CODENAME=noble
+HOME_URL="https://github.com/brokenandalone/Spider-OS1"
+SUPPORT_URL="https://github.com/brokenandalone/Spider-OS1"
+BUG_REPORT_URL="https://github.com/brokenandalone/Spider-OS1/issues"
+SPIDER_OS_VERSION="0.1"
+SPIDER_OS_BASE="Ubuntu Studio 24.04.5"
+SPIDER_OS_SHELL="The Web"
+SPIDER_OS_AI="Webbie"
+SPIDER_OS_SEARCH="Forage"
+SPIDER_OS_SECURITY="Kali Bay"
+SPIDER_OS_TAGLINE="YOUR LIFE. ONE WEB."
+SPIDER_OS_RELEASE
+
+cp "${ROOTFS}/etc/os-release" \
+   "${ROOTFS}/usr/lib/os-release"
+
+cat > "${ROOTFS}/etc/issue" <<'SPIDER_ISSUE'
+Spider OS 0.1 \n \l
+
+SPIDER_ISSUE
+
+cat > "${ROOTFS}/etc/issue.net" <<'SPIDER_ISSUE_NET'
+Spider OS 0.1
+SPIDER_ISSUE_NET
+
+install -d "${ROOTFS}/etc/default/grub.d"
+
+cat > "${ROOTFS}/etc/default/grub.d/99-spider-os.cfg" <<'SPIDER_GRUB'
+GRUB_DISTRIBUTOR="Spider OS"
+GRUB_BACKGROUND="/usr/share/backgrounds/spider-os-wallpaper.png"
+SPIDER_GRUB
+
+echo "Installing Spider OS visual branding..."
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/branding/wallpapers/spider-os-wallpaper.png" \
+  "${ROOTFS}/usr/share/backgrounds/spider-os-wallpaper.png"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/branding/splash/spider-os-splash.png" \
+  "${ROOTFS}/usr/share/spider-os/branding/spider-os-splash.png"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/branding/icons/spider-os-logo.png" \
+  "${ROOTFS}/usr/share/pixmaps/spider-os-logo.png"
+
+install -d "${ROOTFS}/usr/share/spider-os/workspaces"
+cp -a \
+  "${SPIDER_REPO_ROOT}/branding/workspaces/." \
+  "${ROOTFS}/usr/share/spider-os/workspaces/"
+
+install -Dm755 \
+  "${SPIDER_REPO_ROOT}/distro/config/branding/apply-spider-branding.sh" \
+  "${ROOTFS}/usr/local/lib/spider-os/branding/apply-spider-branding.sh"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/config/autostart/spider-branding.desktop" \
+  "${ROOTFS}/etc/xdg/autostart/spider-branding.desktop"
+
+
+echo "Installing Spider OS Plymouth theme..."
+
+install -d \
+  "${ROOTFS}/usr/share/plymouth/themes/spider-os" \
+  "${ROOTFS}/etc/alternatives"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/config/plymouth/spider-os.plymouth" \
+  "${ROOTFS}/usr/share/plymouth/themes/spider-os/spider-os.plymouth"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/config/plymouth/spider-os.script" \
+  "${ROOTFS}/usr/share/plymouth/themes/spider-os/spider-os.script"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/branding/splash/spider-os-splash.png" \
+  "${ROOTFS}/usr/share/plymouth/themes/spider-os/spider-os-splash.png"
+
+ln -sfn \
+  /usr/share/plymouth/themes/spider-os/spider-os.plymouth \
+  "${ROOTFS}/etc/alternatives/default.plymouth"
+
+ln -sfn \
+  /etc/alternatives/default.plymouth \
+  "${ROOTFS}/usr/share/plymouth/themes/default.plymouth"
+
+# Spider OS login-screen branding.
+install -d "${ROOTFS}/etc/sddm.conf.d"
+cat > "${ROOTFS}/etc/sddm.conf.d/spider-os.conf" <<'SDDM'
+[Theme]
+Current=breeze
+SDDM
+
+install -d "${ROOTFS}/usr/share/sddm/themes/breeze"
+cat > "${ROOTFS}/usr/share/sddm/themes/breeze/theme.conf.user" <<'SDDM_THEME'
+[General]
+background=/usr/share/backgrounds/spider-os-wallpaper.png
+SDDM_THEME
+
+echo "Installing Spider OS desktop integration..."
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/config/autostart/the-web.desktop" \
+  "${ROOTFS}/etc/xdg/autostart/the-web.desktop"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/config/autostart/the-web.desktop" \
+  "${ROOTFS}/usr/share/applications/the-web.desktop"
+
+echo "Creating Spider OS live-session layer..."
+
+echo "Installing Spider OS live payload..."
+
+install -d "${LIVE_ROOTFS}/usr/local/lib/spider-os"
+
+rsync -a \
+    "${ROOT}/spider-core/" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/spider-core/"
+
+rsync -a \
+    "${ROOT}/webbie/" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/webbie/"
+
+rsync -a \
+    "${ROOT}/forage/" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/forage/"
+
+rsync -a \
+    "${ROOT}/the-web/" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/the-web/"
+
+rsync -a \
+    "${ROOT}/kali-bay/" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/kali-bay/"
+
+chmod +x \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/spider-core/bin/spider-core" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/webbie/webbie" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/webbie/agent/webbie.py" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/the-web/shell/main.py"
+
+# Spider Core service in live session.
+install -Dm644 \
+    "${ROOT}/distro/systemd/spider-os.service" \
+    "${LIVE_ROOTFS}/etc/systemd/system/spider-os.service"
+
+install -d \
+    "${LIVE_ROOTFS}/etc/systemd/system/graphical.target.wants"
+
+ln -sfn \
+    /etc/systemd/system/spider-os.service \
+    "${LIVE_ROOTFS}/etc/systemd/system/graphical.target.wants/spider-os.service"
+
+# Webbie resident user service in live session.
+install -Dm644 \
+    "${ROOT}/webbie/service/webbie.service" \
+    "${LIVE_ROOTFS}/etc/systemd/user/webbie.service"
+
+install -d \
+    "${LIVE_ROOTFS}/etc/systemd/user/default.target.wants"
+
+ln -sfn \
+    /etc/systemd/user/webbie.service \
+    "${LIVE_ROOTFS}/etc/systemd/user/default.target.wants/webbie.service"
+
+# Spider OS live-session visual identity.
+install -Dm644 \
+    "${ROOT}/branding/wallpapers/spider-os-wallpaper.png" \
+    "${LIVE_ROOTFS}/usr/share/backgrounds/spider-os-wallpaper.png"
+
+install -Dm644 \
+    "${ROOT}/branding/icons/spider-os-logo.png" \
+    "${LIVE_ROOTFS}/usr/share/pixmaps/spider-os-logo.png"
+
+install -Dm644 \
+    "${ROOT}/branding/splash/spider-os-splash.png" \
+    "${LIVE_ROOTFS}/usr/share/spider-os/branding/spider-os-splash.png"
+
+# Live desktop branding and The Web startup.
+install -Dm755 \
+    "${ROOT}/distro/config/branding/apply-spider-branding.sh" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/branding/apply-spider-branding.sh"
+
+install -Dm644 \
+    "${ROOT}/distro/config/autostart/spider-branding.desktop" \
+    "${LIVE_ROOTFS}/etc/xdg/autostart/spider-branding.desktop"
+
+install -Dm644 \
+    "${ROOT}/distro/config/autostart/the-web.desktop" \
+    "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop"
+
+# Spider OS live-session system identity.
+install -d \
+    "${LIVE_ROOTFS}/etc" \
+    "${LIVE_ROOTFS}/usr/lib"
+
+cat > "${LIVE_ROOTFS}/etc/os-release" <<'SPIDER_LIVE_RELEASE'
+NAME="Spider OS"
+PRETTY_NAME="Spider OS 0.1"
+ID=ubuntu
+ID_LIKE=debian
+VERSION_ID="24.04"
+VERSION="0.1 (Ubuntu 24.04 LTS base)"
+VERSION_CODENAME=noble
+UBUNTU_CODENAME=noble
+SPIDER_OS_VERSION="0.1"
+SPIDER_OS_BASE="Ubuntu Studio 24.04.5"
+SPIDER_OS_SHELL="The Web"
+SPIDER_OS_AI="Webbie"
+SPIDER_OS_SEARCH="Forage"
+SPIDER_OS_SECURITY="Kali Bay"
+SPIDER_OS_TAGLINE="YOUR LIFE. ONE WEB."
+SPIDER_LIVE_RELEASE
+
+cp \
+    "${LIVE_ROOTFS}/etc/os-release" \
+    "${LIVE_ROOTFS}/usr/lib/os-release"
+
+cat > "${LIVE_ROOTFS}/etc/issue" <<'SPIDER_LIVE_ISSUE'
+Spider OS 0.1 Live \n \l
+SPIDER_LIVE_ISSUE
+
+# Spider OS login screen for the live environment.
+install -d "${LIVE_ROOTFS}/etc/sddm.conf.d"
+
+cat > "${LIVE_ROOTFS}/etc/sddm.conf.d/spider-os.conf" <<'SPIDER_LIVE_SDDM'
+[Theme]
+Current=breeze
+SPIDER_LIVE_SDDM
+
+install -d "${LIVE_ROOTFS}/usr/share/sddm/themes/breeze"
+
+cat > "${LIVE_ROOTFS}/usr/share/sddm/themes/breeze/theme.conf.user" <<'SPIDER_LIVE_SDDM_THEME'
+[General]
+background=/usr/share/backgrounds/spider-os-wallpaper.png
+SPIDER_LIVE_SDDM_THEME
+
+# Provide an explicitly Spider-branded installer launcher.
+install -d \
+    "${LIVE_ROOTFS}/usr/share/applications" \
+    "${LIVE_ROOTFS}/etc/skel/Desktop"
+
+cat > "${LIVE_ROOTFS}/usr/share/applications/install-spider-os.desktop" <<'SPIDER_INSTALLER'
+[Desktop Entry]
+Type=Application
+Name=Install Spider OS
+Comment=Install Spider OS to this computer
+Exec=/snap/bin/ubuntu-desktop-bootstrap --try-or-install
+TryExec=/snap/bin/ubuntu-desktop-bootstrap
+Icon=spider-os-logo
+Terminal=false
+Categories=System;
+SPIDER_INSTALLER
+
+cp \
+    "${LIVE_ROOTFS}/usr/share/applications/install-spider-os.desktop" \
+    "${LIVE_ROOTFS}/etc/skel/Desktop/Install Spider OS.desktop"
+
+chmod 755 \
+    "${LIVE_ROOTFS}/etc/skel/Desktop/Install Spider OS.desktop"
+
+# Rename any existing Ubuntu installer launchers we can safely identify.
+while IFS= read -r desktop_file; do
+    sed -i \
+        -e 's/Install Ubuntu Studio/Install Spider OS/g' \
+        -e 's/Install Ubuntu 24\.04\.5 LTS/Install Spider OS/g' \
+        -e 's/Install Ubuntu/Install Spider OS/g' \
+        "${desktop_file}"
+done < <(
+    grep -Ilr \
+        'ubuntu-desktop-bootstrap' \
+        "${LIVE_ROOTFS}/usr/share/applications" \
+        "${LIVE_ROOTFS}/etc/skel" \
+        2>/dev/null || true
+)
+
+# Media identity.
+if [[ -d "${ISO_TREE}/.disk" ]]; then
+    printf '%s\n' \
+        'Spider OS 0.1 - Ubuntu Studio 24.04.5 base' \
+        > "${ISO_TREE}/.disk/info"
+fi
+
+# Rename visible GRUB menu references without touching binaries.
+for grub_cfg in \
+    "${ISO_TREE}/boot/grub/grub.cfg" \
+    "${ISO_TREE}/boot/grub/loopback.cfg"
+do
+    if [[ -f "${grub_cfg}" ]]; then
+        sed -i \
+            -e 's/Ubuntu Studio/Spider OS/g' \
+            -e 's/quiet splash/quiet plymouth.enable=0/g' \
+            "${grub_cfg}"
+    fi
+done
+
+rm -f "${ISO_TREE}/casper/standard.live.squashfs"
+
+mksquashfs \
+    "${LIVE_ROOTFS}" \
+    "${ISO_TREE}/casper/standard.live.squashfs" \
+    -comp zstd \
+    -noappend
+
+if [[ -f "${ISO_TREE}/casper/standard.live.size" ]]; then
+    du -sx --block-size=1 "${LIVE_ROOTFS}" \
+        | cut -f1 \
+        > "${ISO_TREE}/casper/standard.live.size"
+fi
+
+rm -rf "${LIVE_ROOTFS}"
+
 mksquashfs \
     "${ROOTFS}" \
     "${ISO_TREE}/casper/standard.squashfs" \
@@ -295,6 +639,7 @@ xorriso \
     -indev "${BASE_ISO}" \
     -outdev "${OUTPUT}" \
     -boot_image any replay \
+    -volid "SPIDER_OS" \
     -map "${ISO_TREE}" / \
     -commit
 

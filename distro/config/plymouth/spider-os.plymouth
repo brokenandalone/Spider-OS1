@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Spider OS
+Description=Spider OS boot splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/spider-os
+ScriptFile=/usr/share/plymouth/themes/spider-os/spider-os.script

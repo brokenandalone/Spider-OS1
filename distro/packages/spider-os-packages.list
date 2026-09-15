@@ -28,3 +28,4 @@ libvirt-daemon-system
 libvirt-clients
 virt-manager
 bridge-utils
+python3-pyqt5
