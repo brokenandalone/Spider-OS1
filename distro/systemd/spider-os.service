@@ -1,12 +1,11 @@
 [Unit]
 Description=Spider OS Core
-After=graphical.target
-Wants=graphical.target
+After=network.target graphical.target
 
 [Service]
 Type=simple
 ExecStart=/usr/local/lib/spider-os/spider-core/bin/spider-core
-Restart=on-failure
+Restart=always
 RestartSec=3
 
 [Install]

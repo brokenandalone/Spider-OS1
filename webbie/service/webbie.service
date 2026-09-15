@@ -1,14 +1,12 @@
 [Unit]
 Description=Webbie Resident AI
 After=network-online.target graphical-session.target
-Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/lib/spider-os/webbie/webbie
-Restart=always
+ExecStart=/usr/bin/python3 /usr/local/lib/spider-os/webbie/agent/webbie.py
+Restart=on-failure
 RestartSec=3
-Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=default.target

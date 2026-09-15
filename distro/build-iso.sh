@@ -374,6 +374,29 @@ cat > "${ROOTFS}/usr/share/sddm/themes/breeze/theme.conf.user" <<'SDDM_THEME'
 background=/usr/share/backgrounds/spider-os-wallpaper.png
 SDDM_THEME
 
+
+echo "Installing Spider OS services..."
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/systemd/spider-os.service" \
+  "${ROOTFS}/usr/lib/systemd/system/spider-os.service"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/webbie/service/webbie.service" \
+  "${ROOTFS}/usr/lib/systemd/user/webbie.service"
+
+install -d \
+  "${ROOTFS}/etc/systemd/system/graphical.target.wants" \
+  "${ROOTFS}/etc/systemd/user/default.target.wants"
+
+ln -sf \
+  /usr/lib/systemd/system/spider-os.service \
+  "${ROOTFS}/etc/systemd/system/graphical.target.wants/spider-os.service"
+
+ln -sf \
+  /usr/lib/systemd/user/webbie.service \
+  "${ROOTFS}/etc/systemd/user/default.target.wants/webbie.service"
+
 echo "Installing Spider OS desktop integration..."
 
 install -Dm644 \
@@ -384,245 +407,9 @@ install -Dm644 \
   "${SPIDER_REPO_ROOT}/distro/config/autostart/the-web.desktop" \
   "${ROOTFS}/usr/share/applications/the-web.desktop"
 
-echo "Creating Spider OS live-session layer..."
-
-echo "Installing Spider OS live payload..."
-
-install -d "${LIVE_ROOTFS}/usr/local/lib/spider-os"
-
-rsync -a \
-    "${ROOT}/spider-core/" \
-    "${LIVE_ROOTFS}/usr/local/lib/spider-os/spider-core/"
-
-rsync -a \
-    "${ROOT}/webbie/" \
-    "${LIVE_ROOTFS}/usr/local/lib/spider-os/webbie/"
-
-rsync -a \
-    "${ROOT}/forage/" \
-    "${LIVE_ROOTFS}/usr/local/lib/spider-os/forage/"
-
-rsync -a \
-    "${ROOT}/the-web/" \
-    "${LIVE_ROOTFS}/usr/local/lib/spider-os/the-web/"
-
-rsync -a \
-    "${ROOT}/kali-bay/" \
-    "${LIVE_ROOTFS}/usr/local/lib/spider-os/kali-bay/"
-
-chmod +x \
-    "${LIVE_ROOTFS}/usr/local/lib/spider-os/spider-core/bin/spider-core" \
-    "${LIVE_ROOTFS}/usr/local/lib/spider-os/webbie/webbie" \
-    "${LIVE_ROOTFS}/usr/local/lib/spider-os/webbie/agent/webbie.py" \
-    "${LIVE_ROOTFS}/usr/local/lib/spider-os/the-web/shell/main.py"
-
-# Spider Core service in live session.
 install -Dm644 \
-    "${ROOT}/distro/systemd/spider-os.service" \
-    "${LIVE_ROOTFS}/etc/systemd/system/spider-os.service"
-
-install -d \
-    "${LIVE_ROOTFS}/etc/systemd/system/graphical.target.wants"
-
-ln -sfn \
-    /etc/systemd/system/spider-os.service \
-    "${LIVE_ROOTFS}/etc/systemd/system/graphical.target.wants/spider-os.service"
-
-# Webbie resident user service in live session.
-install -Dm644 \
-    "${ROOT}/webbie/service/webbie.service" \
-    "${LIVE_ROOTFS}/etc/systemd/user/webbie.service"
-
-install -d \
-    "${LIVE_ROOTFS}/etc/systemd/user/default.target.wants"
-
-ln -sfn \
-    /etc/systemd/user/webbie.service \
-    "${LIVE_ROOTFS}/etc/systemd/user/default.target.wants/webbie.service"
-
-echo "Neutralizing inherited Ubuntu Studio live Plasma layout..."
-
-# This inherited Ubuntu Studio live look-and-feel is crashing
-# plasmashell with:
-#   ReferenceError: plasma is not defined
-rm -rf \
-    "${LIVE_ROOTFS}/usr/share/plasma/look-and-feel/org.ubuntustudio-live.desktop"
-
-# Replace any live-session defaults/scripts still requesting the
-# broken Ubuntu Studio live look-and-feel with KDE Breeze.
-for cfgroot in \
-    "${LIVE_ROOTFS}/etc/xdg" \
-    "${LIVE_ROOTFS}/etc/skel" \
-    "${LIVE_ROOTFS}/usr/share/xsessions" \
-    "${LIVE_ROOTFS}/usr/share/plasma" \
-    "${LIVE_ROOTFS}/usr/share/ubuntustudio"
-do
-    [[ -d "${cfgroot}" ]] || continue
-
-    while IFS= read -r cfg; do
-        sed -i \
-            's/org\.ubuntustudio-live\.desktop/org.kde.breeze.desktop/g' \
-            "${cfg}"
-    done < <(
-        grep -Ilr \
-            'org\.ubuntustudio-live\.desktop' \
-            "${cfgroot}" \
-            2>/dev/null || true
-    )
-done
-
-# The log showed plasmashell starting before kactivitymanagerd
-# was ready. Make the user service ordering explicit.
-install -d \
-    "${LIVE_ROOTFS}/etc/systemd/user/plasma-plasmashell.service.d"
-
-cat > \
-    "${LIVE_ROOTFS}/etc/systemd/user/plasma-plasmashell.service.d/10-spider-kactivity.conf" \
-    <<'SPIDER_KACTIVITY'
-[Unit]
-Wants=plasma-kactivitymanagerd.service
-After=plasma-kactivitymanagerd.service
-SPIDER_KACTIVITY
-
-# The Web remains native and automatic, but let Plasma finish
-# initializing before the Qt command center appears.
-if [[ -f "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop" ]]; then
-    sed -i \
-        "s|^Exec=.*|Exec=sh -c 'sleep 10; exec python3 /usr/local/lib/spider-os/the-web/shell/main.py'|" \
-        "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop"
-fi
-
-# Refuse to build if a live-user configuration still explicitly
-# selects the crashing Ubuntu Studio live look-and-feel.
-STALE_LIVE_REFS="$(
-    grep -Ilr \
-        'org\.ubuntustudio-live\.desktop' \
-        "${LIVE_ROOTFS}/etc/xdg" \
-        "${LIVE_ROOTFS}/etc/skel" \
-        2>/dev/null || true
-)"
-
-if [[ -n "${STALE_LIVE_REFS}" ]]; then
-    echo "ERROR: Stale Ubuntu Studio live Plasma references remain:"
-    echo "${STALE_LIVE_REFS}"
-    exit 1
-fi
-
-echo "Spider OS live Plasma safety fixes applied."
-
-# Spider OS live-session visual identity.
-install -Dm644 \
-    "${ROOT}/branding/wallpapers/spider-os-wallpaper.png" \
-    "${LIVE_ROOTFS}/usr/share/backgrounds/spider-os-wallpaper.png"
-
-install -Dm644 \
-    "${ROOT}/branding/icons/spider-os-logo.png" \
-    "${LIVE_ROOTFS}/usr/share/pixmaps/spider-os-logo.png"
-
-install -Dm644 \
-    "${ROOT}/branding/splash/spider-os-splash.png" \
-    "${LIVE_ROOTFS}/usr/share/spider-os/branding/spider-os-splash.png"
-
-# Live desktop branding and The Web startup.
-install -Dm755 \
-    "${ROOT}/distro/config/branding/apply-spider-branding.sh" \
-    "${LIVE_ROOTFS}/usr/local/lib/spider-os/branding/apply-spider-branding.sh"
-
-install -Dm644 \
-    "${ROOT}/distro/config/autostart/the-web.desktop" \
-    "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop"
-
-# Spider OS live-session system identity.
-install -d \
-    "${LIVE_ROOTFS}/etc" \
-    "${LIVE_ROOTFS}/usr/lib"
-
-cat > "${LIVE_ROOTFS}/etc/os-release" <<'SPIDER_LIVE_RELEASE'
-NAME="Spider OS"
-PRETTY_NAME="Spider OS 0.1"
-ID=ubuntu
-ID_LIKE=debian
-VERSION_ID="24.04"
-VERSION="0.1 (Ubuntu 24.04 LTS base)"
-VERSION_CODENAME=noble
-UBUNTU_CODENAME=noble
-SPIDER_OS_VERSION="0.1"
-SPIDER_OS_BASE="Ubuntu Studio 24.04.5"
-SPIDER_OS_SHELL="The Web"
-SPIDER_OS_AI="Webbie"
-SPIDER_OS_SEARCH="Forage"
-SPIDER_OS_SECURITY="Kali Bay"
-SPIDER_OS_TAGLINE="YOUR LIFE. ONE WEB."
-SPIDER_LIVE_RELEASE
-
-cp \
-    "${LIVE_ROOTFS}/etc/os-release" \
-    "${LIVE_ROOTFS}/usr/lib/os-release"
-
-cat > "${LIVE_ROOTFS}/etc/issue" <<'SPIDER_LIVE_ISSUE'
-Spider OS 0.1 Live \n \l
-SPIDER_LIVE_ISSUE
-
-# Provide an explicitly Spider-branded installer launcher.
-install -d \
-    "${LIVE_ROOTFS}/usr/share/applications" \
-    "${LIVE_ROOTFS}/etc/skel/Desktop"
-
-cat > "${LIVE_ROOTFS}/usr/share/applications/install-spider-os.desktop" <<'SPIDER_INSTALLER'
-[Desktop Entry]
-Type=Application
-Name=Install Spider OS
-Comment=Install Spider OS to this computer
-Exec=/snap/bin/ubuntu-desktop-bootstrap --try-or-install
-TryExec=/snap/bin/ubuntu-desktop-bootstrap
-Icon=spider-os-logo
-Terminal=false
-Categories=System;
-SPIDER_INSTALLER
-
-cp \
-    "${LIVE_ROOTFS}/usr/share/applications/install-spider-os.desktop" \
-    "${LIVE_ROOTFS}/etc/skel/Desktop/Install Spider OS.desktop"
-
-chmod 755 \
-    "${LIVE_ROOTFS}/etc/skel/Desktop/Install Spider OS.desktop"
-
-# Rename any existing Ubuntu installer launchers we can safely identify.
-while IFS= read -r desktop_file; do
-    sed -i \
-        -e 's/Install Ubuntu Studio/Install Spider OS/g' \
-        -e 's/Install Ubuntu 24\.04\.5 LTS/Install Spider OS/g' \
-        -e 's/Install Ubuntu/Install Spider OS/g' \
-        "${desktop_file}"
-done < <(
-    grep -Ilr \
-        'ubuntu-desktop-bootstrap' \
-        "${LIVE_ROOTFS}/usr/share/applications" \
-        "${LIVE_ROOTFS}/etc/skel" \
-        2>/dev/null || true
-)
-
-# Media identity.
-if [[ -d "${ISO_TREE}/.disk" ]]; then
-    printf '%s\n' \
-        'Spider OS 0.1 - Ubuntu Studio 24.04.5 base' \
-        > "${ISO_TREE}/.disk/info"
-fi
-
-# Rename visible GRUB menu references without touching binaries.
-for grub_cfg in \
-    "${ISO_TREE}/boot/grub/grub.cfg" \
-    "${ISO_TREE}/boot/grub/loopback.cfg"
-do
-    if [[ -f "${grub_cfg}" ]]; then
-        sed -i \
-            -e 's/Ubuntu Studio/Spider OS/g' \
-            -e 's/quiet splash/quiet plymouth.enable=0/g' \
-            "${grub_cfg}"
-    fi
-done
-
-rm -f "${ISO_TREE}/casper/standard.live.squashfs"
+  "${SPIDER_REPO_ROOT}/distro/config/autostart/the-web.desktop" \
+  "${ROOTFS}/etc/skel/.config/autostart/the-web.desktop"
 
 mksquashfs \
     "${LIVE_ROOTFS}" \

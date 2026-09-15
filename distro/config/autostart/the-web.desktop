@@ -1,10 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=The Web
-Comment=Spider OS Native Command Center
+Comment=Spider OS native shell
 Exec=python3 /usr/local/lib/spider-os/the-web/shell/main.py
-Icon=applications-system
 Terminal=false
-X-KDE-autostart-after=panel
-X-KDE-StartupNotify=false
-Categories=System;
+X-GNOME-Autostart-enabled=true
+StartupNotify=false
