@@ -440,6 +440,76 @@ ln -sfn \
     /etc/systemd/user/webbie.service \
     "${LIVE_ROOTFS}/etc/systemd/user/default.target.wants/webbie.service"
 
+echo "Neutralizing inherited Ubuntu Studio live Plasma layout..."
+
+# This inherited Ubuntu Studio live look-and-feel is crashing
+# plasmashell with:
+#   ReferenceError: plasma is not defined
+rm -rf \
+    "${LIVE_ROOTFS}/usr/share/plasma/look-and-feel/org.ubuntustudio-live.desktop"
+
+# Replace any live-session defaults/scripts still requesting the
+# broken Ubuntu Studio live look-and-feel with KDE Breeze.
+for cfgroot in \
+    "${LIVE_ROOTFS}/etc/xdg" \
+    "${LIVE_ROOTFS}/etc/skel" \
+    "${LIVE_ROOTFS}/usr/share/xsessions" \
+    "${LIVE_ROOTFS}/usr/share/plasma" \
+    "${LIVE_ROOTFS}/usr/share/ubuntustudio"
+do
+    [[ -d "${cfgroot}" ]] || continue
+
+    while IFS= read -r cfg; do
+        sed -i \
+            's/org\.ubuntustudio-live\.desktop/org.kde.breeze.desktop/g' \
+            "${cfg}"
+    done < <(
+        grep -Ilr \
+            'org\.ubuntustudio-live\.desktop' \
+            "${cfgroot}" \
+            2>/dev/null || true
+    )
+done
+
+# The log showed plasmashell starting before kactivitymanagerd
+# was ready. Make the user service ordering explicit.
+install -d \
+    "${LIVE_ROOTFS}/etc/systemd/user/plasma-plasmashell.service.d"
+
+cat > \
+    "${LIVE_ROOTFS}/etc/systemd/user/plasma-plasmashell.service.d/10-spider-kactivity.conf" \
+    <<'SPIDER_KACTIVITY'
+[Unit]
+Wants=plasma-kactivitymanagerd.service
+After=plasma-kactivitymanagerd.service
+SPIDER_KACTIVITY
+
+# The Web remains native and automatic, but let Plasma finish
+# initializing before the Qt command center appears.
+if [[ -f "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop" ]]; then
+    sed -i \
+        "s|^Exec=.*|Exec=sh -c 'sleep 10; exec python3 /usr/local/lib/spider-os/the-web/shell/main.py'|" \
+        "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop"
+fi
+
+# Refuse to build if a live-user configuration still explicitly
+# selects the crashing Ubuntu Studio live look-and-feel.
+STALE_LIVE_REFS="$(
+    grep -Ilr \
+        'org\.ubuntustudio-live\.desktop' \
+        "${LIVE_ROOTFS}/etc/xdg" \
+        "${LIVE_ROOTFS}/etc/skel" \
+        2>/dev/null || true
+)"
+
+if [[ -n "${STALE_LIVE_REFS}" ]]; then
+    echo "ERROR: Stale Ubuntu Studio live Plasma references remain:"
+    echo "${STALE_LIVE_REFS}"
+    exit 1
+fi
+
+echo "Spider OS live Plasma safety fixes applied."
+
 # Spider OS live-session visual identity.
 install -Dm644 \
     "${ROOT}/branding/wallpapers/spider-os-wallpaper.png" \
@@ -457,10 +527,6 @@ install -Dm644 \
 install -Dm755 \
     "${ROOT}/distro/config/branding/apply-spider-branding.sh" \
     "${LIVE_ROOTFS}/usr/local/lib/spider-os/branding/apply-spider-branding.sh"
-
-install -Dm644 \
-    "${ROOT}/distro/config/autostart/spider-branding.desktop" \
-    "${LIVE_ROOTFS}/etc/xdg/autostart/spider-branding.desktop"
 
 install -Dm644 \
     "${ROOT}/distro/config/autostart/the-web.desktop" \
@@ -496,21 +562,6 @@ cp \
 cat > "${LIVE_ROOTFS}/etc/issue" <<'SPIDER_LIVE_ISSUE'
 Spider OS 0.1 Live \n \l
 SPIDER_LIVE_ISSUE
-
-# Spider OS login screen for the live environment.
-install -d "${LIVE_ROOTFS}/etc/sddm.conf.d"
-
-cat > "${LIVE_ROOTFS}/etc/sddm.conf.d/spider-os.conf" <<'SPIDER_LIVE_SDDM'
-[Theme]
-Current=breeze
-SPIDER_LIVE_SDDM
-
-install -d "${LIVE_ROOTFS}/usr/share/sddm/themes/breeze"
-
-cat > "${LIVE_ROOTFS}/usr/share/sddm/themes/breeze/theme.conf.user" <<'SPIDER_LIVE_SDDM_THEME'
-[General]
-background=/usr/share/backgrounds/spider-os-wallpaper.png
-SPIDER_LIVE_SDDM_THEME
 
 # Provide an explicitly Spider-branded installer launcher.
 install -d \
