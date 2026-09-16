@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Spider Media Player
+GenericName=Media Player
+Comment=Spider OS media workspace
+Exec=/usr/local/bin/spider-media-player
+Icon=spider-os-logo
+Terminal=false
+Categories=AudioVideo;Audio;Video;
+StartupNotify=true

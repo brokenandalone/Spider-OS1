@@ -29,3 +29,14 @@ libvirt-clients
 virt-manager
 bridge-utils
 python3-pyqt5
+alsa-utils
+libnotify-bin
+mpv
+zstd
+build-essential
+cmake
+pkg-config
+konsole
+libreoffice-writer
+okular
+xdg-utils

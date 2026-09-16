@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
-set -e
-exec python3 /usr/local/lib/spider-os/webbie/agent/webbie.py
+set -Eeuo pipefail
+
+exec /usr/bin/python3 \
+  /usr/local/lib/spider-os/webbie/agent/webbie.py

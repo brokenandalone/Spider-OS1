@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+PROFILE="public"
+[[ -r /etc/spider-os/media-profile ]] && PROFILE="$(tr -d '[:space:]' < /etc/spider-os/media-profile)"
+export SPIDER_SPM_PROFILE="${PROFILE}"
+if [[ "${PROFILE}" == "personal" ]]; then
+  export SPIDER_AI_DJ_SERVICE="http://127.0.0.1:9876"
+  export SPIDER_AI_DJ_AVAILABLE=1
+else
+  export SPIDER_AI_DJ_AVAILABLE=0
+fi
+exec /opt/spider-media-player/spider-media-player "$@"

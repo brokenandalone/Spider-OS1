@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Forage
+GenericName=Spider OS Search
+Comment=Search, connect, and discover
+Exec=python3 /usr/local/lib/spider-os/forage/forage.py
+Icon=spider-os-logo
+Terminal=false
+Categories=Utility;Education;
+StartupNotify=true

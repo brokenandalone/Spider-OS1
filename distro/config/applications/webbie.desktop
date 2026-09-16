@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Webbie
+GenericName=Spider OS Resident AI
+Comment=Talk to Webbie
+Exec=python3 /usr/local/lib/spider-os/webbie/ui/webbie-ui.py
+Icon=spider-os-logo
+Terminal=false
+Categories=Utility;System;
+StartupNotify=true

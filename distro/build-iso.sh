@@ -2,6 +2,9 @@
 
 set -Eeuo pipefail
 
+# Public builds never receive the private Kabel/AI-DJ bundle by accident.
+SPM_PROFILE="${SPM_PROFILE:-public}"
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD="${ROOT}/build"
 
@@ -146,6 +149,19 @@ if [[ -d "${ROOT}/branding" ]]; then
         "${ROOTFS}/usr/local/lib/spider-os/branding/"
 fi
 
+echo "Installing Spider Study workspace..."
+
+install -d \
+    "${ROOTFS}/usr/local/lib/spider-os/study"
+
+rsync -a --delete \
+    "${ROOT}/study/" \
+    "${ROOTFS}/usr/local/lib/spider-os/study/"
+
+chmod +x \
+    "${ROOTFS}/usr/local/lib/spider-os/study/bin/study" \
+    "${ROOTFS}/usr/local/lib/spider-os/study/study.py"
+
 install -Dm644 \
     "${ROOT}/distro/systemd/spider-os.service" \
     "${ROOTFS}/usr/lib/systemd/system/spider-os.service"
@@ -153,6 +169,10 @@ install -Dm644 \
 install -Dm644 \
     "${ROOT}/webbie/service/webbie.service" \
     "${ROOTFS}/usr/lib/systemd/user/webbie.service"
+
+install -Dm644 \
+    "${ROOT}/distro/systemd/ollama.service" \
+    "${ROOTFS}/usr/lib/systemd/system/ollama.service"
 
 install -Dm644 \
     "${ROOT}/distro/packages/spider-os-packages.list" \
@@ -206,6 +226,124 @@ grep -vE '^[[:space:]]*(#|$)' \
 
 xargs -r apt-get install -y < /tmp/spider-packages.clean
 
+echo "Installing whisper.cpp for Webbie..."
+
+rm -rf /tmp/whisper.cpp
+
+WHISPER_REPO="$(
+    printf '%s%s'         'https://github.com/'         'ggml-org/whisper.cpp.git'
+)"
+
+git clone     --depth 1     "${WHISPER_REPO}"     /tmp/whisper.cpp
+
+cmake     -S /tmp/whisper.cpp     -B /tmp/whisper.cpp/build     -DCMAKE_BUILD_TYPE=Release
+
+cmake     --build /tmp/whisper.cpp/build     --config Release     -j"$(nproc)"
+
+install     -Dm755     /tmp/whisper.cpp/build/bin/whisper-cli     /usr/local/bin/whisper-cli
+
+install     -d     -m755     /usr/local/share/spider-os/whisper
+
+bash     /tmp/whisper.cpp/models/download-ggml-model.sh base.en     /usr/local/share/spider-os/whisper
+
+test     -x /usr/local/bin/whisper-cli
+
+test     -f /usr/local/share/spider-os/whisper/ggml-base.en.bin
+
+echo "Webbie whisper.cpp engine installed."
+
+rm -rf /tmp/whisper.cpp
+
+echo "Installing Webbie neural voice runtime..."
+
+python3 -m venv /opt/spider-webbie
+
+/opt/spider-webbie/bin/pip install \
+    --no-cache-dir \
+    --upgrade \
+    pip
+
+/opt/spider-webbie/bin/pip install \
+    --no-cache-dir \
+    edge-tts
+
+echo "Installing Forage search runtime..."
+
+python3 -m venv /opt/spider-forage
+
+/opt/spider-forage/bin/pip install \
+    --no-cache-dir \
+    --upgrade \
+    pip
+
+/opt/spider-forage/bin/pip install \
+    --no-cache-dir \
+    "ddgs==9.16.0"
+
+echo "Installing Ollama local AI runtime..."
+
+rm -rf /usr/lib/ollama
+
+curl -fsSL \
+    https://ollama.com/download/ollama-linux-amd64.tar.zst \
+    | tar --zstd -x -C /usr
+
+if ! id ollama >/dev/null 2>&1; then
+    useradd \
+        --system \
+        --user-group \
+        --create-home \
+        --home-dir /usr/share/ollama \
+        --shell /usr/sbin/nologin \
+        ollama
+fi
+
+install -d \
+    -o ollama \
+    -g ollama \
+    -m 0755 \
+    /usr/share/ollama/.ollama/models
+
+echo "Bundling Webbie local AI model..."
+
+su \
+    -s /bin/bash \
+    ollama \
+    -c 'HOME=/usr/share/ollama OLLAMA_MODELS=/usr/share/ollama/.ollama/models nohup /usr/bin/ollama serve >/tmp/spider-ollama-build.log 2>&1 & echo $! >/tmp/spider-ollama.pid'
+
+for attempt in $(seq 1 30); do
+    if curl -fsS \
+        http://127.0.0.1:11434/api/tags \
+        >/dev/null 2>&1
+    then
+        break
+    fi
+
+    sleep 1
+done
+
+if ! curl -fsS \
+    http://127.0.0.1:11434/api/tags \
+    >/dev/null 2>&1
+then
+    echo "Ollama failed to start during image build."
+    cat /tmp/spider-ollama-build.log || true
+    exit 1
+fi
+
+su \
+    -s /bin/bash \
+    ollama \
+    -c 'HOME=/usr/share/ollama OLLAMA_MODELS=/usr/share/ollama/.ollama/models /usr/bin/ollama pull qwen3:1.7b'
+
+if [[ -f /tmp/spider-ollama.pid ]]; then
+    kill "$(cat /tmp/spider-ollama.pid)" 2>/dev/null || true
+fi
+
+rm -f \
+    /tmp/spider-ollama.pid \
+    /tmp/spider-ollama-build.log
+
 chmod +x \
     /usr/local/lib/spider-os/spider-core/bin/spider-core \
     /usr/local/lib/spider-os/webbie/webbie \
@@ -226,6 +364,10 @@ echo "Enabling Spider OS services..."
 systemctl \
     --root="${ROOTFS}" \
     enable spider-os.service
+
+systemctl \
+    --root="${ROOTFS}" \
+    enable ollama.service
 
 systemctl \
     --root="${ROOTFS}" \
@@ -374,6 +516,9 @@ cat > "${ROOTFS}/usr/share/sddm/themes/breeze/theme.conf.user" <<'SDDM_THEME'
 background=/usr/share/backgrounds/spider-os-wallpaper.png
 SDDM_THEME
 
+echo "Installing Spider Media Player profile: ${SPM_PROFILE}"
+"${ROOT}/distro/install-spm.sh" "${ROOTFS}" "${ROOT}" "${SPM_PROFILE}"
+
 echo "Installing Spider OS desktop integration..."
 
 install -Dm644 \
@@ -387,6 +532,27 @@ install -Dm644 \
 install -Dm644 \
   "${SPIDER_REPO_ROOT}/distro/config/autostart/the-web.desktop" \
   "${ROOTFS}/usr/share/applications/the-web.desktop"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/config/applications/webbie.desktop" \
+  "${ROOTFS}/usr/share/applications/webbie.desktop"
+
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/config/applications/study.desktop" \
+  "${ROOTFS}/usr/share/applications/study.desktop"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/config/applications/forage.desktop" \
+  "${ROOTFS}/usr/share/applications/forage.desktop"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/config/applications/deep-forage.desktop" \
+  "${ROOTFS}/usr/share/applications/deep-forage.desktop"
+
+install -Dm644 \
+  "${SPIDER_REPO_ROOT}/distro/config/applications/kali-bay.desktop" \
+  "${ROOTFS}/usr/share/applications/kali-bay.desktop"
 
 install -Dm644 \
   "${SPIDER_REPO_ROOT}/distro/config/autostart/the-web.desktop" \
@@ -437,9 +603,26 @@ ln -sfn \
     "${LIVE_ROOTFS}/etc/systemd/system/graphical.target.wants/spider-os.service"
 
 # Webbie resident user service in live session.
+echo "Installing Study into live Spider OS..."
+
+install -d \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/study"
+
+rsync -a --delete \
+    "${ROOT}/study/" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/study/"
+
+chmod +x \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/study/bin/study" \
+    "${LIVE_ROOTFS}/usr/local/lib/spider-os/study/study.py"
+
 install -Dm644 \
     "${ROOT}/webbie/service/webbie.service" \
     "${LIVE_ROOTFS}/etc/systemd/user/webbie.service"
+
+install -Dm644 \
+    "${ROOT}/distro/systemd/ollama.service" \
+    "${LIVE_ROOTFS}/usr/lib/systemd/system/ollama.service"
 
 install -d \
     "${LIVE_ROOTFS}/etc/systemd/user/default.target.wants"
@@ -539,6 +722,27 @@ install -Dm755 \
 install -Dm644 \
     "${ROOT}/distro/config/autostart/the-web.desktop" \
     "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop"
+
+install -Dm644 \
+    "${ROOT}/distro/config/applications/webbie.desktop" \
+    "${LIVE_ROOTFS}/usr/share/applications/webbie.desktop"
+
+
+install -Dm644 \
+    "${ROOT}/distro/config/applications/study.desktop" \
+    "${LIVE_ROOTFS}/usr/share/applications/study.desktop"
+
+install -Dm644 \
+    "${ROOT}/distro/config/applications/forage.desktop" \
+    "${LIVE_ROOTFS}/usr/share/applications/forage.desktop"
+
+install -Dm644 \
+    "${ROOT}/distro/config/applications/deep-forage.desktop" \
+    "${LIVE_ROOTFS}/usr/share/applications/deep-forage.desktop"
+
+install -Dm644 \
+    "${ROOT}/distro/config/applications/kali-bay.desktop" \
+    "${LIVE_ROOTFS}/usr/share/applications/kali-bay.desktop"
 
 # Spider OS live-session system identity.
 install -d \

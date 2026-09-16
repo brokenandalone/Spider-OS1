@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT="/usr/local/lib/spider-os/study"
+
+if [[ ! -d "${ROOT}" ]]; then
+    ROOT="$(
+        cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
+        pwd
+    )"
+fi
+
+exec python3 \
+    "${ROOT}/study.py"

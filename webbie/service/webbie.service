@@ -1,12 +1,22 @@
 [Unit]
-Description=Webbie Resident AI
-After=network-online.target graphical-session.target
+Description=Webbie Resident AI for Spider OS
+Documentation=https://github.com/brokenandalone/Spider-OS1
+After=graphical-session.target network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/python3 /usr/local/lib/spider-os/webbie/agent/webbie.py
-Restart=on-failure
+Restart=always
 RestartSec=3
+TimeoutStopSec=10
+
+Environment=PYTHONUNBUFFERED=1
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=false
 
 [Install]
 WantedBy=default.target

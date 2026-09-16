@@ -1,0 +1,34 @@
+{
+  "name": "Webbie",
+  "wake_words": [
+    "hey webbie",
+    "webbie",
+    "hey web",
+    "web"
+  ],
+  "greet_on_login": true,
+  "check_in_minutes": 45,
+  "default_user_name": "Cory",
+  "context_names": {
+    "default": "Cory",
+    "studio": "Justin",
+    "kali-bay": "Spider"
+  },
+  "voice": {
+    "online": "en-AU-NatashaNeural",
+    "offline": "en-au+f3",
+    "rate": "0%"
+  },
+  "ollama": {
+    "url": "http://127.0.0.1:11434/api/chat",
+    "model": "qwen3:1.7b"
+  },
+  "speech_recognition": {
+    "engine": "whisper.cpp",
+    "model": "base.en",
+    "model_path": "/usr/local/share/spider-os/whisper/ggml-base.en.bin",
+    "language": "en",
+    "chunk_seconds": 4,
+    "offline": true
+  }
+}

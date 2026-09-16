@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Deep Forage
+GenericName=Spider OS Research
+Comment=Autonomous multi-source research
+Exec=python3 /usr/local/lib/spider-os/forage/deep-forage/deep_forage.py
+Icon=spider-os-logo
+Terminal=false
+Categories=Utility;Education;
+StartupNotify=true

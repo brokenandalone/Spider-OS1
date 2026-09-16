@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Kali Bay
+GenericName=Spider OS Security Workspace
+Comment=Open the isolated Kali Linux security workspace
+Exec=/usr/local/lib/spider-os/kali-bay/bin/kali-bay
+Icon=spider-os-logo
+Terminal=false
+Categories=System;Utility;
+StartupNotify=true

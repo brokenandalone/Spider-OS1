@@ -1,0 +1,333 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+NAME="kali-bay"
+IMAGE="docker.io/kalilinux/kali-rolling"
+
+STATE_DIR="${HOME}/.local/state/spider-os/kali-bay"
+DATA_DIR="${HOME}/.local/share/spider-os/kali-bay"
+KALI_HOME="${DATA_DIR}/home"
+READY_FILE="${STATE_DIR}/full-toolset.ready"
+
+SCRIPT_DIR="$(
+    cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+    pwd
+)"
+
+KALI_ROOT="$(
+    cd -- "${SCRIPT_DIR}/.."
+    pwd
+)"
+
+mkdir -p \
+    "${STATE_DIR}" \
+    "${DATA_DIR}" \
+    "${KALI_HOME}"
+
+
+die() {
+    printf 'Kali Bay: %s\n' "$*" >&2
+    exit 1
+}
+
+
+require_host_tools() {
+    command -v podman >/dev/null 2>&1 \
+        || die "Podman is not installed."
+
+    command -v distrobox >/dev/null 2>&1 \
+        || die "Distrobox is not installed."
+}
+
+
+container_exists() {
+    podman container exists "${NAME}" \
+        >/dev/null 2>&1
+}
+
+
+full_toolset_installed() {
+    container_exists || return 1
+
+    distrobox enter \
+        --name "${NAME}" \
+        -- \
+        bash -lc \
+        'dpkg-query -W -f="${Status}" kali-linux-everything 2>/dev/null | grep -q "install ok installed"' \
+        >/dev/null 2>&1
+}
+
+
+create_container() {
+    require_host_tools
+
+    if container_exists; then
+        echo "Kali Bay container already exists."
+        return
+    fi
+
+    echo
+    echo "Creating isolated Kali Bay..."
+    echo "Image: ${IMAGE}"
+    echo "Dedicated home: ${KALI_HOME}"
+    echo
+
+    distrobox create \
+        --name "${NAME}" \
+        --image "${IMAGE}" \
+        --home "${KALI_HOME}" \
+        --yes
+
+    echo
+    echo "Kali Bay container created."
+}
+
+
+setup_full() {
+    require_host_tools
+    create_container
+
+    echo
+    echo "============================================"
+    echo "       KALI BAY FULL TOOLSET SETUP"
+    echo "============================================"
+    echo
+    echo "Installing kali-linux-everything."
+    echo "This is the complete Kali metapackage."
+    echo
+    echo "The installation is intentionally inside"
+    echo "Kali Bay, NOT on the Spider OS Ubuntu host."
+    echo
+    echo "============================================"
+    echo
+
+    distrobox enter \
+        --name "${NAME}" \
+        -- \
+        bash -lc '
+            set -e
+
+            echo
+            echo "=== KALI REPOSITORY UPDATE ==="
+            sudo apt-get update
+
+            echo
+            echo "=== INSTALLING FULL KALI TOOLSET ==="
+
+            sudo env \
+                DEBIAN_FRONTEND=noninteractive \
+                apt-get install \
+                -y \
+                kali-linux-everything
+
+            echo
+            echo "=== CLEANING PACKAGE CACHE ==="
+            sudo apt-get clean
+
+            echo
+            echo "=== VERIFYING ==="
+
+            dpkg-query \
+                -W \
+                -f="${Status}\n" \
+                kali-linux-everything
+        '
+
+    if full_toolset_installed; then
+        date -Iseconds > "${READY_FILE}"
+
+        echo
+        echo "============================================"
+        echo "      FULL KALI BAY IS INSTALLED"
+        echo "============================================"
+    else
+        rm -f "${READY_FILE}"
+
+        die "Full Kali toolset verification failed."
+    fi
+}
+
+
+update_kali() {
+    require_host_tools
+
+    container_exists \
+        || die "Kali Bay has not been initialized."
+
+    echo
+    echo "Updating Kali Bay..."
+
+    distrobox enter \
+        --name "${NAME}" \
+        -- \
+        bash -lc '
+            set -e
+            sudo apt-get update
+            sudo env \
+                DEBIAN_FRONTEND=noninteractive \
+                apt-get full-upgrade \
+                -y
+            sudo apt-get autoremove \
+                -y
+            sudo apt-get clean
+        '
+
+    echo
+    echo "Kali Bay update complete."
+}
+
+
+open_terminal() {
+    require_host_tools
+
+    container_exists \
+        || create_container
+
+    if command -v konsole >/dev/null 2>&1; then
+        exec konsole \
+            -e \
+            distrobox enter \
+            --name "${NAME}"
+    fi
+
+    exec distrobox enter \
+        --name "${NAME}"
+}
+
+
+category_shell() {
+    local meta="${1:-kali-linux-everything}"
+    local title="${2:-Kali Bay}"
+
+    require_host_tools
+
+    container_exists \
+        || die "Initialize Kali Bay first."
+
+    if command -v konsole >/dev/null 2>&1; then
+        exec konsole \
+            --hold \
+            -e \
+            distrobox enter \
+            --name "${NAME}" \
+            -- \
+            bash -lc "
+                clear
+
+                printf '\n'
+                printf 'KALI BAY\n'
+                printf '%s\n' '${title}'
+                printf '========================================\n'
+                printf 'Kali metapackage: %s\n' '${meta}'
+                printf '\n'
+
+                if dpkg-query \
+                    -W \
+                    -f='\${Status}' \
+                    '${meta}' \
+                    2>/dev/null \
+                    | grep -q \
+                    'install ok installed'
+                then
+                    printf 'Category installed and ready.\n'
+                else
+                    printf 'Category package is not installed yet.\n'
+                    printf 'Run full Kali Bay setup first.\n'
+                fi
+
+                printf '\n'
+                printf 'Authorized systems and labs only.\n'
+                printf '\n'
+
+                exec bash
+            "
+    fi
+
+    distrobox enter \
+        --name "${NAME}"
+}
+
+
+status() {
+    if full_toolset_installed; then
+        echo "ready"
+        exit 0
+    fi
+
+    if container_exists; then
+        echo "container"
+        exit 0
+    fi
+
+    echo "missing"
+}
+
+
+info() {
+    echo "Name: Kali Bay"
+    echo "Container: ${NAME}"
+    echo "Image: ${IMAGE}"
+    echo "Home: ${KALI_HOME}"
+    echo "Status: $(status)"
+
+    if [[ -f "${READY_FILE}" ]]; then
+        echo "Full setup: $(cat "${READY_FILE}")"
+    fi
+}
+
+
+launch_ui() {
+    exec python3 \
+        "${KALI_ROOT}/ui/kali_bay.py"
+}
+
+
+case "${1:-ui}" in
+    ui)
+        launch_ui
+        ;;
+
+    create)
+        create_container
+        ;;
+
+    setup|install|provision)
+        setup_full
+        ;;
+
+    terminal|shell|enter)
+        open_terminal
+        ;;
+
+    update|upgrade)
+        update_kali
+        ;;
+
+    category)
+        category_shell \
+            "${2:-kali-linux-everything}" \
+            "${3:-Kali Bay}"
+        ;;
+
+    status)
+        status
+        ;;
+
+    info)
+        info
+        ;;
+
+    *)
+        cat <<EOF
+Usage:
+  kali-bay
+  kali-bay setup
+  kali-bay terminal
+  kali-bay update
+  kali-bay status
+  kali-bay info
+  kali-bay category <metapackage> <title>
+EOF
+        exit 2
+        ;;
+esac
