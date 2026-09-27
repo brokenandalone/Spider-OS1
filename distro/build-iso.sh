@@ -424,6 +424,24 @@ chmod +x \
     "${LIVE_ROOTFS}/usr/local/lib/spider-os/webbie/agent/webbie.py" \
     "${LIVE_ROOTFS}/usr/local/lib/spider-os/the-web/shell/main.py"
 
+echo "Stabilizing Spider OS live-session boot..."
+
+printf '%s\n' 'spider-os' > "${LIVE_ROOTFS}/etc/hostname"
+
+cat > "${LIVE_ROOTFS}/etc/hosts" <<'SPIDER_LIVE_HOSTS'
+127.0.0.1 localhost
+127.0.1.1 spider-os
+::1 localhost ip6-localhost ip6-loopback
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+SPIDER_LIVE_HOSTS
+
+install -d "${LIVE_ROOTFS}/etc/systemd/system"
+
+ln -sfn \
+    /dev/null \
+    "${LIVE_ROOTFS}/etc/systemd/system/NetworkManager-wait-online.service"
+
 # Spider Core service in live session.
 install -Dm644 \
     "${ROOT}/distro/systemd/spider-os.service" \
@@ -492,14 +510,6 @@ Wants=plasma-kactivitymanagerd.service
 After=plasma-kactivitymanagerd.service
 SPIDER_KACTIVITY
 
-# The Web remains native and automatic, but let Plasma finish
-# initializing before the Qt command center appears.
-if [[ -f "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop" ]]; then
-    sed -i \
-        "s|^Exec=.*|Exec=sh -c 'sleep 10; exec python3 /usr/local/lib/spider-os/the-web/shell/main.py'|" \
-        "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop"
-fi
-
 # Refuse to build if a live-user configuration still explicitly
 # selects the crashing Ubuntu Studio live look-and-feel.
 STALE_LIVE_REFS="$(
@@ -537,7 +547,15 @@ install -Dm755 \
     "${LIVE_ROOTFS}/usr/local/lib/spider-os/branding/apply-spider-branding.sh"
 
 install -Dm644 \
+    "${ROOT}/distro/config/autostart/spider-branding.desktop" \
+    "${LIVE_ROOTFS}/etc/xdg/autostart/spider-branding.desktop"
+
+install -Dm644 \
     "${ROOT}/distro/config/autostart/the-web.desktop" \
+    "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop"
+
+sed -i \
+    "s|^Exec=.*|Exec=sh -c 'sleep 10; exec python3 /usr/local/lib/spider-os/the-web/shell/main.py'|" \
     "${LIVE_ROOTFS}/etc/xdg/autostart/the-web.desktop"
 
 # Spider OS live-session system identity.
