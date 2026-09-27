@@ -1,0 +1,30 @@
+name: Spider OS ISO build checks
+
+on:
+  push:
+    paths:
+      - 'distro/**'
+      - '.github/workflows/spider-iso-check.yml'
+  pull_request:
+    paths:
+      - 'distro/**'
+      - '.github/workflows/spider-iso-check.yml'
+  workflow_dispatch:
+
+jobs:
+  shell-lint:
+    name: Validate shell scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify bash syntax
+        run: bash -n distro/build-iso.sh
+
+      - name: Run ShellCheck on distro scripts
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './distro'
+          format: gcc
