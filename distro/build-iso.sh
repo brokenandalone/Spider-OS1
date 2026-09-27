@@ -260,10 +260,7 @@ echo "Creating Spider OS standard.squashfs..."
 
 rm -f "${ISO_TREE}/casper/standard.squashfs"
 
-
-
 SPIDER_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
 
 echo "Installing Spider OS system identity..."
 
@@ -424,6 +421,23 @@ chmod +x \
     "${LIVE_ROOTFS}/usr/local/lib/spider-os/webbie/agent/webbie.py" \
     "${LIVE_ROOTFS}/usr/local/lib/spider-os/the-web/shell/main.py"
 
+echo "Stabilizing Spider OS live-session boot..."
+
+printf '%s\n' 'spider-os' > "${LIVE_ROOTFS}/etc/hostname"
+
+cat > "${LIVE_ROOTFS}/etc/hosts" <<'SPIDER_LIVE_HOSTS'
+127.0.0.1 localhost
+127.0.1.1 spider-os
+::1 localhost ip6-localhost ip6-loopback
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+SPIDER_LIVE_HOSTS
+
+install -d "${LIVE_ROOTFS}/etc/systemd/system"
+
+ln -sfn /dev/null \
+    "${LIVE_ROOTFS}/etc/systemd/system/NetworkManager-wait-online.service"
+
 # Spider Core service in live session.
 install -Dm644 \
     "${ROOT}/distro/systemd/spider-os.service" \
@@ -535,6 +549,10 @@ install -Dm644 \
 install -Dm755 \
     "${ROOT}/distro/config/branding/apply-spider-branding.sh" \
     "${LIVE_ROOTFS}/usr/local/lib/spider-os/branding/apply-spider-branding.sh"
+
+install -Dm644 \
+    "${ROOT}/distro/config/autostart/spider-branding.desktop" \
+    "${LIVE_ROOTFS}/etc/xdg/autostart/spider-branding.desktop"
 
 install -Dm644 \
     "${ROOT}/distro/config/autostart/the-web.desktop" \
