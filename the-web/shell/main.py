@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import shutil
 
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
@@ -99,6 +100,8 @@ class TheWeb(QMainWindow):
         side.addSpacing(25)
 
         side.addWidget(SpiderButton("Webbie", self.show_webbie))
+        side.addWidget(SpiderButton("Studio", self.launch_studio))
+        side.addWidget(SpiderButton("Spider Media Player", self.launch_media))
         side.addWidget(SpiderButton("Forage", self.launch_forage))
         side.addWidget(SpiderButton("Deep Forage", self.launch_deep_forage))
         side.addWidget(SpiderButton("Kali Bay", self.launch_kali_bay))
@@ -199,6 +202,25 @@ class TheWeb(QMainWindow):
         self.status.setText(
             "Webbie is resident and connected to The Web."
         )
+
+    def launch_studio(self):
+        path = os.path.join(SPIDER_ROOT, "studio", "main.py")
+        if os.path.exists(path):
+            self.launch(["python3", path])
+        else:
+            self.status.setText("Spider Studio is not installed.")
+
+    def launch_media(self):
+        command = shutil.which("spider-media-player")
+        if command:
+            self.launch([command])
+            return
+
+        path = "/opt/spider-media-player/spider-media-player"
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            self.launch([path])
+        else:
+            self.status.setText("Spider Media Player is not installed.")
 
     def launch_forage(self):
         path = os.path.join(SPIDER_ROOT, "forage", "forage.py")
