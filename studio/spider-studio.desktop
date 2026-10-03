@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Spider Studio
+Comment=Spider OS creative workspace
+Exec=python3 /usr/local/lib/spider-os/studio/main.py
+Icon=spider-os-logo
+Terminal=false
+Categories=AudioVideo;Development;Office;
+StartupNotify=true
+Keywords=Spider;Studio;Author;Music;Media;Webbie;
