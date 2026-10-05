@@ -577,12 +577,12 @@ NAME="Spider OS"
 PRETTY_NAME="Spider OS 0.1"
 ID=ubuntu
 ID_LIKE=debian
-VERSION_ID="24.04"
-VERSION="0.1 (Ubuntu 24.04 LTS base)"
-VERSION_CODENAME=noble
-UBUNTU_CODENAME=noble
+VERSION_ID="${UBUNTU_RELEASE}"
+VERSION="0.1 (Ubuntu ${UBUNTU_RELEASE} base)"
+VERSION_CODENAME=${UBUNTU_CODENAME}
+UBUNTU_CODENAME=${UBUNTU_CODENAME}
 SPIDER_OS_VERSION="0.1"
-SPIDER_OS_BASE="Ubuntu Studio 24.04.5"
+SPIDER_OS_BASE="Ubuntu Studio ${UBUNTU_IMAGE_VERSION}"
 SPIDER_OS_SHELL="The Web"
 SPIDER_OS_AI="Webbie"
 SPIDER_OS_SEARCH="Forage"
@@ -640,7 +640,7 @@ done < <(
 # Media identity.
 if [[ -d "${ISO_TREE}/.disk" ]]; then
     printf '%s\n' \
-        'Spider OS 0.1 - Ubuntu Studio ${UBUNTU_IMAGE_VERSION} base' \
+        "Spider OS 0.1 - Ubuntu Studio ${UBUNTU_IMAGE_VERSION} base" \
         > "${ISO_TREE}/.disk/info"
 fi
 
