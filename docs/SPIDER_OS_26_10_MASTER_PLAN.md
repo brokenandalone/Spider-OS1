@@ -23,7 +23,7 @@ Known USB inventory for planned roles:
 
 - 200+ GB USB drive: preferred full portable AI DJ drive with models, voices, metadata, cache, runtime, and backups.
 - 64 GB USB drive: suitable for a lighter portable AI DJ build, installer/test media during migration, or recovery media.
-- 258 GB USB drive: available as a large secondary AI/Webbie storage option. It is large enough for multiple local models, voice assets, indexes, research caches, backups, and portable Webbie support data if we decide removable AI storage is useful. Webbie's primary runtime can still remain on the internal drive for speed and reliability, while the 258 GB drive can hold larger model libraries or mirrored recovery assets.
+- 256 GB USB drive: available as a large secondary AI/Webbie storage option. It is large enough for multiple local models, voice assets, indexes, research caches, backups, and portable Webbie support data if we decide removable AI storage is useful. Webbie's primary runtime can still remain on the internal drive for speed and reliability, while the 258 GB drive can hold larger model libraries or mirrored recovery assets.
 
 Do not dedicate a drive permanently until the 26.10 migration and recovery-media needs are settled.
 
