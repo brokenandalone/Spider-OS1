@@ -16,6 +16,17 @@ Owner intent: Spider OS must remain bootable while evolving into a Jarvis-style 
 
 ---
 
+
+## Available removable storage
+
+Known USB inventory for planned roles:
+
+- 200+ GB USB drive: preferred full portable AI DJ drive with models, voices, metadata, cache, runtime, and backups.
+- 64 GB USB drive: suitable for a lighter portable AI DJ build, installer/test media during migration, or recovery media.
+- 2 GB USB drive: too small for current multi-GB local language models; reserve for Webbie configuration/recovery/bootstrap data, keys or small support files if a removable Webbie support drive is useful. Webbie's primary runtime and models should remain on the internal drive for speed and reliability unless a later design requires portability.
+
+Do not dedicate a drive permanently until the 26.10 migration and recovery-media needs are settled.
+
 # Phase 0: Freeze the current working Spider OS
 
 Before the 26.10 migration:
@@ -35,6 +46,26 @@ Before the 26.10 migration:
 This is the restore point for the entire migration.
 
 ---
+
+
+## Migration method from the running Spider OS system
+
+The currently booting Spider OS may be used as the build and migration workstation.
+
+Do not attempt an unsupported one-step in-place jump from the current Ubuntu 24.04-based Spider OS directly to Ubuntu Studio 26.10.
+
+Preferred path:
+
+1. Preserve and snapshot the currently booting Spider OS.
+2. Use the running Spider OS to update the source tree, build the 26.10 Spider OS image, create test media, and run VM qualification.
+3. Keep the host on the known-working boot configuration while the 26.10 beta/final image is being qualified.
+4. If an in-place base transition is used, first use the supported Ubuntu 24.04 LTS -> Ubuntu 26.04.1 LTS release upgrade path.
+5. Only after that base is stable, move from 26.04 to 26.10 using the supported interim-release path when appropriate. Do not use a development-release upgrade on the only working installation unless a full rollback path has already been tested.
+6. Prefer a controlled 26.10 install/migration if it proves safer than carrying custom Spider OS state through multiple release upgrades.
+7. Preserve LUKS encryption and the existing password-unlock behavior throughout the migration unless a separate later project explicitly changes it.
+
+The running system is therefore the control station for the upgrade, not disposable test media.
+
 
 # Phase 1: Create the Ubuntu Studio 26.10 migration branch
 
