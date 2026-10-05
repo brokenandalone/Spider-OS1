@@ -29,6 +29,8 @@ jobs:
       - name: Validate Spider OS scripts
         run: |
           bash -n distro/build-iso.sh
+          test -f distro/config/base.env
+          bash -c 'set -a; source distro/config/base.env; test "$UBUNTU_RELEASE" = "26.10"; test "$UBUNTU_CODENAME" = "stonking"; test -n "$UBUNTU_IMAGE_NAME"'
           test -f distro/packages/spider-os-packages.list
           test -f distro/systemd/spider-os.service
           test -f webbie/service/webbie.service
@@ -60,7 +62,8 @@ jobs:
       - name: Resolve ISO name
         id: iso
         run: |
-          ISO="$(find build -maxdepth 1 -type f -name 'Spider_OS*_24.04.5_amd64.iso' | head -n 1)"
+          source distro/config/base.env
+          ISO="build/Spider_OS_${UBUNTU_IMAGE_VERSION}_amd64.iso"
 
           if [ -z "${ISO}" ]; then
             echo "No Spider OS ISO found in build/"
@@ -122,6 +125,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          source distro/config/base.env
           ISO="${{ steps.iso.outputs.iso_name }}"
           TAG="spider-os-build-${GITHUB_RUN_NUMBER}"
 
@@ -130,7 +134,7 @@ jobs:
           else
             gh release create "${TAG}" \
               --title "Spider OS Native Build ${GITHUB_RUN_NUMBER}" \
-              --notes "Native Spider OS development build based on Ubuntu Studio 24.04.5." \
+              --notes "Native Spider OS development build based on Ubuntu Studio ${UBUNTU_IMAGE_VERSION} (${UBUNTU_CODENAME})." \
               --prerelease
           fi
 
