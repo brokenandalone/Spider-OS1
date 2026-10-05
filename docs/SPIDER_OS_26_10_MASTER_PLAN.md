@@ -21,9 +21,10 @@ Owner intent: Spider OS must remain bootable while evolving into a Jarvis-style 
 
 Known USB inventory for planned roles:
 
-- 200+ GB USB drive: preferred full portable AI DJ drive with models, voices, metadata, cache, runtime, and backups.
-- 64 GB USB drive: suitable for a lighter portable AI DJ build, installer/test media during migration, or recovery media.
-- 256 GB USB drive: available as a large secondary AI/Webbie storage option. It is large enough for multiple local models, voice assets, indexes, research caches, backups, and portable Webbie support data if we decide removable AI storage is useful. Webbie's primary runtime can still remain on the internal drive for speed and reliability, while the 258 GB drive can hold larger model libraries or mirrored recovery assets.
+- 256 GB USB drive: the single large removable drive. Preferred candidate for the full portable AI DJ build, or for a split portable AI/Webbie storage layout if we later decide that is more useful. It is large enough for multiple local models, voice assets, track intelligence, research indexes, caches, runtime files, and backups.
+- 64 GB USB drive: suitable for Spider OS 26.10 installer/test media, recovery media, or a lighter portable AI DJ build.
+
+Webbie's primary runtime should remain on the internal drive for speed and reliability. The 256 GB drive can still carry selected Webbie models, research caches, recovery assets, or portable support data if useful.
 
 Do not dedicate a drive permanently until the 26.10 migration and recovery-media needs are settled.
 
