@@ -32,11 +32,10 @@ class WorkspaceLauncherTests(unittest.TestCase):
             center.chmod(0o644)
             self.assertEqual(apps.media_command(opt, lambda name: '/legacy-wrapper'), ['/legacy-wrapper'])
 
-    def test_author_uses_separate_editor_session_and_never_folder_fallback(self):
-        self.assertEqual(apps.author_command(which=lambda name: '/usr/bin/kate' if name == 'kate' else None),
-                         ['/usr/bin/kate', '--start', 'Spider-Author'])
-        with self.assertRaises(apps.AppUnavailable):
-            apps.author_command(which=lambda name: None)
+    def test_author_opens_native_library_without_a_document(self):
+        with patch('builtins.__import__', return_value=object()):
+            self.assertEqual(apps.author_command(which=lambda name: None),
+                             ['python3', str(ROOT / 'author/main.py')])
 
     def test_docx_opens_writer_and_text_requires_text_editor(self):
         with tempfile.TemporaryDirectory() as directory:

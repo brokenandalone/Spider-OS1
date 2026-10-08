@@ -33,6 +33,15 @@ def media_command(opt=Path('/opt'), which=shutil.which):
 
 
 def author_command(document=None, which=shutil.which):
+    if document is None:
+        script = ROOT / 'author/main.py'
+        if not script.is_file():
+            raise AppUnavailable('The native Author module is missing.')
+        try:
+            __import__('PyQt5.QtWidgets')
+        except ImportError:
+            raise AppUnavailable('Author requires python3-pyqt5.') from None
+        return ['python3', str(script)]
     if document is not None:
         document = Path(document).expanduser().resolve(strict=True)
         if not document.is_file():

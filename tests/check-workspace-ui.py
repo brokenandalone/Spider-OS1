@@ -37,6 +37,16 @@ with tempfile.TemporaryDirectory() as folder:
             panel.launch_music()
             assert 'No supported DAW' in panel.status.text()
         panel.close()
+author = load('companion_author', root / 'author/main.py')
+with tempfile.TemporaryDirectory() as folder:
+    panel = author.AuthorWindow(folder)
+    book = panel.store.create_book('Test book')
+    chapter = panel.store.create_chapter(book, 'One', 'Original')
+    panel.load_books(); panel.books.setCurrentRow(0); panel.chapters.setCurrentRow(0)
+    assert panel.editor.toPlainText() == 'Original'
+    panel.editor.setPlainText('Saved chapter'); panel.autosave()
+    assert panel.store.chapter(chapter)['content'] == 'Saved chapter'
+    panel.close()
 window.close()
 app.processEvents()
 print('Companion Studio/Author/Media launcher GUI smoke test passed.')
