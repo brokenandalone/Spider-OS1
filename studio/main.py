@@ -10,7 +10,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication,
-    QFrame,
+    QFrame, QGridLayout, QScrollArea, QTabWidget,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -22,6 +22,8 @@ from PyQt5.QtWidgets import (
 SPIDER_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SPIDER_ROOT / 'system'))
 from apps import AppUnavailable, media_command
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tools import TOOLS, resolve_tool
 STUDIO_HOME = Path.home() / 'Documents' / 'Spider Studio'
 
 
@@ -39,6 +41,11 @@ class SpiderStudio(QMainWindow):
         self.resize(1180, 760)
 
         self.setStyleSheet("""
+            QWidget { background: #0c0a10; color: #eeeaf3; }
+            QTabBar::tab { background:#21172d; color:#e9d5ff; padding:8px; }
+            QTabBar::tab:selected { background:#4c1d95; }
+            QTabWidget::pane, QScrollArea { border:1px solid #4c1d95; }
+            QPushButton:disabled { background:#17121d; color:#93869e; border-color:#352543; }
             QMainWindow { background: #0c0a10; color: #eeeaf3; }
             QFrame#sidebar { background: #15111b; border-right: 1px solid #6d28d9; }
             QLabel { color: #eeeaf3; }
@@ -73,7 +80,7 @@ class SpiderStudio(QMainWindow):
         side.setSpacing(10)
 
         logo = QLabel('SPIDER STUDIO')
-        logo.setFont(QFont('Sans Serif', 22, QFont.Bold))
+        logo.setFont(QFont('Sans Serif', 18, QFont.Bold))
         logo.setStyleSheet('color: #a78bfa;')
         side.addWidget(logo)
 
@@ -97,7 +104,7 @@ class SpiderStudio(QMainWindow):
 
         center = QWidget()
         content = QVBoxLayout(center)
-        content.setContentsMargins(50, 48, 50, 48)
+        content.setContentsMargins(24, 24, 24, 24)
 
         title = QLabel('Spider Studio')
         title.setFont(QFont('Sans Serif', 32, QFont.Bold))
@@ -119,14 +126,25 @@ class SpiderStudio(QMainWindow):
             label.setFont(QFont('Sans Serif', 14))
             content.addWidget(label)
 
-        content.addSpacing(20)
-        note = QLabel(
-            'Spider Media Center is the Media module.\n'
-            'Webbie remains the resident AI service shared across Spider OS.'
-        )
-        note.setStyleSheet('color: #82788d;')
-        content.addWidget(note)
-        content.addStretch()
+        self.tool_tabs = QTabWidget()
+        content.addWidget(self.tool_tabs, 1)
+        self.tool_buttons = []
+        for category, tools in TOOLS.items():
+            page = QWidget(); grid = QGridLayout(page)
+            for index, tool in enumerate(tools):
+                frame = QFrame(); box = QVBoxLayout(frame)
+                heading = QLabel(tool[0]); heading.setStyleSheet('font-size:18px; color:#c4b5fd;')
+                box.addWidget(heading)
+                description = QLabel(tool[1]); description.setWordWrap(True); box.addWidget(description)
+                button = QPushButton('Open')
+                button.clicked.connect(lambda checked=False, selected=tool: self.launch_tool(selected))
+                box.addWidget(button); grid.addWidget(frame, index // 2, index % 2)
+                self.tool_buttons.append((tool, button))
+            scroll = QScrollArea(); scroll.setWidgetResizable(True); scroll.setWidget(page)
+            self.tool_tabs.addTab(scroll, category.replace('&', '&&'))
+        refresh = QPushButton('Refresh installed tools'); refresh.clicked.connect(self.refresh_tools)
+        content.addWidget(refresh)
+        self.refresh_tools()
 
         footer = QLabel('SPIDER OS  •  YOUR LIFE. ONE WEB.')
         footer.setAlignment(Qt.AlignCenter)
@@ -143,17 +161,37 @@ class SpiderStudio(QMainWindow):
     def launch(self, command):
         try:
             subprocess.Popen(command)
-            self.status.setText('Launched: ' + ' '.join(command))
+            self.status.setText('Application opened.')
+            return True
         except Exception as exc:
             self.status.setText(str(exc))
+            return False
+
+    def refresh_tools(self):
+        installed = 0
+        for tool, button in self.tool_buttons:
+            available = resolve_tool(tool) is not None
+            button.setEnabled(available)
+            button.setText('Open' if available else 'Unavailable on this machine')
+            installed += int(available)
+        self.status.setText(f'{installed} creative tools available.')
+
+    def launch_tool(self, tool):
+        command = resolve_tool(tool)
+        if command is None:
+            self.refresh_tools()
+            self.status.setText(f'{tool[0]} is not available on this machine.')
+            return
+        if self.launch(command):
+            self.status.setText(f'Opened {tool[0]}.')
 
     def launch_music(self):
-        for command in ('ardour8', 'ardour', 'carla'):
-            path = shutil.which(command)
-            if path:
-                self.launch([path])
+        for tool in TOOLS['Recording & mixing']:
+            command = resolve_tool(tool)
+            if command:
+                self.launch(command)
                 return
-        self.status.setText('No supported DAW is installed. Install Ardour or Carla to use Music Studio.')
+        self.status.setText('No supported DAW or audio editor was detected. Refresh installed tools after checking the Ubuntu Studio menu.')
 
     def media_command(self):
         try:
