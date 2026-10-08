@@ -1,0 +1,7 @@
+{
+  "cloud_enabled": false,
+  "crypt_remote": "",
+  "sources": {},
+  "exclude": ["*.log", "models/*", "*.gguf", "*.bin"],
+  "max_file_bytes": 67108864
+}

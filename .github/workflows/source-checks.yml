@@ -1,0 +1,20 @@
+name: Spider OS source checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Guardian and vault recovery regression tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Validate system tool syntax
+        run: |
+          bash -n system/bin/spider-guardian
+          bash -n system/bin/spider-vault
+          python3 -m py_compile system/guardian.py system/vault.py

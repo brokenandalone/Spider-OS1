@@ -1,0 +1,11 @@
+[Unit]
+Description=Optional daily Spider Vault snapshot
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=15m
+Unit=spider-vault.service
+
+[Install]
+WantedBy=timers.target

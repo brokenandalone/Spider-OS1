@@ -51,3 +51,7 @@ Do all 26.10 base work on:
 `migration/ubuntu-studio-26.10`
 
 Do not merge the migration branch into `main` until the install-and-boot qualification gate passes.
+
+## Guardian and Vault source batch
+
+The companion carries matching system tools, recovery tests and usage documentation. Installed/live ISO packaging is implemented in `spider-narive-os`; this older scaffold does not establish installed qualification. Follow `docs/INSTALLED_SPIDER_OS_MASTER_CHECKLIST.md` for the installed system, retaining all live-machine gates.
