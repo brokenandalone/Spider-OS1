@@ -14,7 +14,7 @@ jobs:
       - name: Install desktop test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pyqt5 dbus-bin
+          sudo apt-get install -y python3-pyqt5 python3-docx dbus-bin
       - name: Guardian and vault recovery regression tests
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Validate system tool syntax
@@ -28,3 +28,8 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           QT_ACCESSIBILITY: '0'
         run: timeout --kill-after=5 120 dbus-run-session -- python3 -u tests/check-workspace-ui.py
+      - name: School dashboard and APA export smoke test
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_ACCESSIBILITY: '0'
+        run: timeout --kill-after=5 120 dbus-run-session -- python3 -u tests/check-school-ui.py

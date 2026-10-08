@@ -29,3 +29,5 @@ libvirt-clients
 virt-manager
 bridge-utils
 python3-pyqt5
+
+python3-docx

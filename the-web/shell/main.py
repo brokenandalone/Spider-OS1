@@ -108,6 +108,7 @@ class TheWeb(QMainWindow):
         side.addWidget(SpiderButton("Webbie", self.show_webbie))
         side.addWidget(SpiderButton("Studio", self.launch_studio))
         side.addWidget(SpiderButton("Author", self.launch_author))
+        side.addWidget(SpiderButton("School", self.launch_school))
         side.addWidget(SpiderButton("Spider Media Center", self.launch_media))
         side.addWidget(SpiderButton("Forage", self.launch_forage))
         side.addWidget(SpiderButton("Deep Forage", self.launch_deep_forage))
@@ -196,6 +197,12 @@ class TheWeb(QMainWindow):
             self.status.setText("The Web is connected.")
         else:
             self.status.setText("Spider OS services need attention.")
+
+    def launch_school(self):
+        script = SPIDER_ROOT / 'study/study.py'
+        if not script.is_file():
+            self.status.setText('School module is missing.'); return
+        self.launch(['python3', str(script)])
 
     def launch(self, command):
         try:
