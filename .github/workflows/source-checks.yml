@@ -21,7 +21,8 @@ jobs:
         run: |
           bash -n system/bin/spider-guardian
           bash -n system/bin/spider-vault
-          python3 -m py_compile system/guardian.py system/vault.py
+          python3 -m py_compile system/guardian.py system/vault.py webbie/actions/gateway.py
+          bash -n webbie/actions/webbie-action
       - name: Native workspace smoke test
         env:
           QT_QPA_PLATFORM: offscreen

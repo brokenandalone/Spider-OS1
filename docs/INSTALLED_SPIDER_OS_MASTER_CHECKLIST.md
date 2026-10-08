@@ -221,3 +221,7 @@ All installed-machine checkboxes above remain unchanged. This batch does not est
 ## GitHub implementation batch: workspace launchers
 
 Native Studio, separate Author launcher, shared media resolution and Media Center naming are synchronized from the authoritative repository. See `docs/WORKSPACE_LAUNCHER_REPAIRS.md`. Installed/live packaging and qualification remain the responsibility of `spider-narive-os`; installed checkboxes remain unchecked.
+
+## GitHub implementation batch: Webbie action gateway
+
+Fixed local actions, request-bound approvals and workspace modes are synchronized under `webbie/actions`. Voice integration remains disconnected and installed gates remain unchecked. See `docs/WEBBIE_ACTION_GATEWAY.md`.
