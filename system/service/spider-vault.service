@@ -1,0 +1,10 @@
+[Unit]
+Description=Spider OS verified local snapshot and optional encrypted OneDrive backup
+ConditionPathExists=%h/.config/spider-os/vault.json
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/spider-os/system/bin/spider-vault scheduled
+UMask=0077
+NoNewPrivileges=true
+TimeoutStartSec=3h
