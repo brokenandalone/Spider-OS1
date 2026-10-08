@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Author
+Comment=Spider OS author workspace
+Exec=/usr/local/lib/spider-os/author/bin/author %f
+Icon=spider-os-logo
+Terminal=false
+Categories=Office;
+StartupNotify=true

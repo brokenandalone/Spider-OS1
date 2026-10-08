@@ -19,7 +19,9 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-AUTHOR_STUDIO_URL = 'https://webbie-author-studio-guwtrp.v2.appdeploy.ai/'
+SPIDER_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(SPIDER_ROOT / 'system'))
+from apps import AppUnavailable, media_command
 STUDIO_HOME = Path.home() / 'Documents' / 'Spider Studio'
 
 
@@ -54,7 +56,7 @@ class SpiderStudio(QMainWindow):
         """)
 
         STUDIO_HOME.mkdir(parents=True, exist_ok=True)
-        for name in ('Author', 'Music', 'Media', 'Artwork'):
+        for name in ('Music', 'Media', 'Artwork'):
             (STUDIO_HOME / name).mkdir(parents=True, exist_ok=True)
 
         root = QWidget()
@@ -80,9 +82,8 @@ class SpiderStudio(QMainWindow):
         side.addWidget(subtitle)
         side.addSpacing(24)
 
-        side.addWidget(StudioButton('Author Studio', self.launch_author))
         side.addWidget(StudioButton('Music Studio', self.launch_music))
-        side.addWidget(StudioButton('Spider Media Player', self.launch_media))
+        side.addWidget(StudioButton('Spider Media Center', self.launch_media))
         side.addWidget(StudioButton('Artwork', self.open_artwork))
         side.addWidget(StudioButton('Studio Files', self.open_studio_home))
         side.addStretch()
@@ -104,7 +105,7 @@ class SpiderStudio(QMainWindow):
 
         description = QLabel(
             'The creative workspace for Spider OS.\n'
-            'Authoring • Music • Media • Artwork • Webbie'
+            'Music • Media • Artwork • Webbie'
         )
         description.setFont(QFont('Sans Serif', 16))
         description.setStyleSheet('color: #b6a9c7;')
@@ -120,7 +121,7 @@ class SpiderStudio(QMainWindow):
 
         content.addSpacing(20)
         note = QLabel(
-            'Spider Media Player is the Media module.\n'
+            'Spider Media Center is the Media module.\n'
             'Webbie remains the resident AI service shared across Spider OS.'
         )
         note.setStyleSheet('color: #82788d;')
@@ -146,32 +147,26 @@ class SpiderStudio(QMainWindow):
         except Exception as exc:
             self.status.setText(str(exc))
 
-    def launch_author(self):
-        self.launch(['xdg-open', AUTHOR_STUDIO_URL])
-
     def launch_music(self):
         for command in ('ardour8', 'ardour', 'carla'):
             path = shutil.which(command)
             if path:
                 self.launch([path])
                 return
-        self.launch(['xdg-open', str(STUDIO_HOME / 'Music')])
+        self.status.setText('No supported DAW is installed. Install Ardour or Carla to use Music Studio.')
 
     def media_command(self):
-        command = shutil.which('spider-media-player')
-        if command:
-            return command
-        bundled = '/opt/spider-media-player/spider-media-player'
-        return bundled if os.path.isfile(bundled) and os.access(bundled, os.X_OK) else None
+        try:
+            return media_command()
+        except AppUnavailable:
+            return None
 
     def launch_media(self):
         command = self.media_command()
         if command:
-            self.launch([command])
+            self.launch(command)
         else:
-            self.status.setText(
-                'Spider Media Player is not installed. Run the Spider Media Player installer.'
-            )
+            self.status.setText('Spider Media Center is not installed. Install a verified media package first.')
 
     def open_artwork(self):
         self.launch(['xdg-open', str(STUDIO_HOME / 'Artwork')])
@@ -180,39 +175,31 @@ class SpiderStudio(QMainWindow):
         self.launch(['xdg-open', str(STUDIO_HOME)])
 
     def user_service_active(self, service):
-        result = subprocess.run(
-            ['systemctl', '--user', 'is-active', service],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-        )
-        return result.stdout.strip() == 'active'
+        try:
+            result = subprocess.run(
+                ['systemctl', '--user', 'is-active', service],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=2,
+            )
+            return result.stdout.strip() == 'active'
+        except (OSError, subprocess.TimeoutExpired):
+            return False
 
     def update_status(self):
         media = self.media_command()
         webbie = self.user_service_active('webbie.service')
 
         self.media_status.setText(
-            '● Spider Media Player: INSTALLED'
+            '● Spider Media Center: INSTALLED'
             if media
-            else '○ Spider Media Player: NOT INSTALLED'
+            else '○ Spider Media Center: NOT INSTALLED'
         )
         self.webbie_status.setText(
             '● Webbie: ACTIVE' if webbie else '○ Webbie: OFFLINE'
         )
 
-        ollama = shutil.which('ollama')
-        if ollama:
-            result = subprocess.run(
-                [ollama, 'list'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-            )
-            model = 'qwen3:8b' if 'qwen3:8b' in result.stdout.lower() else 'available'
-            self.ollama_status.setText(f'● Ollama: {model}')
-        else:
-            self.ollama_status.setText('○ Ollama: NOT FOUND')
+        self.ollama_status.setText(
+            '● Ollama: INSTALLED' if shutil.which('ollama') else '○ Ollama: NOT FOUND'
+        )
 
 
 def main():

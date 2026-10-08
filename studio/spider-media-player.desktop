@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Spider Media Player
+Name=Spider Media Center
 Comment=Spider OS media player
-Exec=/usr/local/bin/spider-media-player %U
+Exec=/usr/local/lib/spider-os/media/bin/spider-media-center %U
 Icon=multimedia-player
 Terminal=false
 Categories=AudioVideo;Audio;Video;Player;
