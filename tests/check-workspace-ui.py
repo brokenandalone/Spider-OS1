@@ -36,6 +36,13 @@ with tempfile.TemporaryDirectory() as folder:
         with patch.object(studio.shutil, 'which', return_value=None):
             panel.launch_music()
             assert 'No supported DAW' in panel.status.text()
+        assert panel.tool_tabs.count() == 4
+        with patch.object(studio, 'resolve_tool', return_value=['/test/ardour']), \
+             patch.object(studio.subprocess, 'Popen') as launch:
+            panel.refresh_tools()
+            assert all(button.isEnabled() for _, button in panel.tool_buttons)
+            panel.launch_tool(studio.TOOLS['Recording & mixing'][0])
+            launch.assert_called_once_with(['/test/ardour'])
         panel.close()
 author = load('companion_author', root / 'author/main.py')
 with tempfile.TemporaryDirectory() as folder:
