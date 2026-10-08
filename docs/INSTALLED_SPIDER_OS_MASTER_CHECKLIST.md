@@ -6,6 +6,32 @@
 **Companion/staging repository:** `brokenandalone/Spider-OS1`  
 **Status:** Planned checklist; unchecked items are NOT evidence that the feature is absent. Verify against the live machine before marking done.
 
+## Completed source work (not installed-machine completion)
+
+Updated 2026-10-07, America/Indiana/Indianapolis. Checked items below mean implemented source and named regression validation. All upgrades are on open, stacked PR branches; none of these batches has been merged or deployed by this session. Full phase gates below remain pending live verification.
+
+- [x] Spider Guardian read-only health report and private diagnostics file. Native [PR #2](https://github.com/brokenandalone/spider-narive-os/pull/2); source and desktop CI passed.
+- [x] Selected-source verified local snapshots, transaction-safe SQLite backups and restore into a new directory. Native PR #2; recovery regressions passed.
+- [x] Optional encrypted OneDrive-copy implementation, upload guard and disabled daily snapshot timer. Native PR #2; policy tests passed. Real authentication/upload/restore is pending.
+- [x] Automatic source CI on pinned Ubuntu 24.04 runners in both repositories. All three previous source batches passed GitHub checks.
+- [x] Native Studio app/launcher and missing-DAW dependency messages. Native [PR #3](https://github.com/brokenandalone/spider-narive-os/pull/3); source and GUI smoke tests passed.
+- [x] Independent Author launcher with Kate/Writer routing and separate project folders. Native PR #3; this is an editor foundation, not the full manuscript library.
+- [x] Media Center launcher naming and recovered legacy-executable compatibility. Native PR #3; resolver tests passed; live playback is pending.
+- [x] Separate Studio/Author entry points in The Web and scrolling card area. Native PR #3; desktop smoke tests passed.
+- [x] Webbie fixed-action gateway, exact-request approvals, expiry and replay prevention. Native [PR #4](https://github.com/brokenandalone/spider-narive-os/pull/4); 37 native source tests and GitHub desktop checks passed.
+- [x] Nine workspace modes and role guidance for a future assistant adapter. Native PR #4; not connected to the live voice agent.
+- [x] Forage selected-source text index, source URIs/provenance, stale/deleted-source handling and atomic rebuild. Current `upgrades/forage-local-index` batch; 46 native source tests passed locally. GitHub CI status is recorded on the batch PR.
+
+## Immediate remaining delivery steps
+
+- [ ] Merge the validated stacked source PRs in dependency order.
+- [ ] Inventory/backup the installed files and preserve local-only Webbie, media and boot fixes.
+- [ ] Deploy selected modules and verify their real launch/close/relaunch behavior.
+- [ ] Configure OneDrive locally, then prove encrypted upload/download and restore.
+- [ ] Verify the microphone and both authorized voice profiles, conversations, interruption and dismissal.
+- [ ] Connect the action gateway through a trusted approval UI and authenticated voice/session adapter.
+- [ ] Select Forage source folders on the PC and verify real searches and source links.
+
 ## Non-negotiable rules
 
 - Keep the known-booting encrypted installation usable throughout development. Do not replace known-good installed components with older scaffold code.
@@ -212,16 +238,10 @@
 - Revisit priority order after each phase, but preserve the rule: **working installed system -> reliable Webbie -> recovery/OneDrive -> workspaces -> future distribution release**.
 - Keep `docs/SPIDER_OS_26_10_MASTER_PLAN.md` as the broader release roadmap; use this document as the ordered installed-system execution checklist.
 
-## GitHub implementation batch: Guardian and Vault
-
-2026-10-08 UTC: Source for the Phase 2 read-only Guardian report and Phase 3 selected-source local snapshots / optional encrypted OneDrive copy is implemented. See `docs/GUARDIAN_AND_VAULT.md` for commands, regression coverage and remaining live gates. The vault user timer is packaged but disabled. A fast pinned-runner CI workflow now validates source on pushes and pull requests without launching the ISO build.
-
-All installed-machine checkboxes above remain unchanged. This batch does not establish installed deployment, live OneDrive authentication, voice enrollment or encrypted boot qualification.
-
 ## GitHub implementation batch: workspace launchers
 
-Native Studio, separate Author launcher, shared media resolution and Media Center naming are synchronized from the authoritative repository. See `docs/WORKSPACE_LAUNCHER_REPAIRS.md`. Installed/live packaging and qualification remain the responsibility of `spider-narive-os`; installed checkboxes remain unchecked.
+2026-10-08 UTC: Native Studio source/launcher, an independent Author editor launcher, common media resolution and Media Center menu naming are implemented in the workspace-launcher branch. The Web exposes Studio and Author separately, and packaging includes their modules. See `docs/WORKSPACE_LAUNCHER_REPAIRS.md` for the deliberately limited Author foundation and the remaining installed-machine checks. No live checkbox is marked complete from source tests.
 
 ## GitHub implementation batch: Webbie action gateway
 
-Fixed local actions, request-bound approvals and workspace modes are synchronized under `webbie/actions`. Voice integration remains disconnected and installed gates remain unchecked. See `docs/WEBBIE_ACTION_GATEWAY.md`.
+2026-10-08 UTC: A local fixed-action registry, request-bound approval queue and workspace mode context are implemented under `webbie/actions`. The existing voice agent and its installed fixes are preserved. See `docs/WEBBIE_ACTION_GATEWAY.md` for the trust boundary and pending voice/approval-surface integration. No live-machine checkbox is marked complete.
