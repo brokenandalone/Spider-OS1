@@ -217,3 +217,7 @@
 2026-10-08 UTC: Source for the Phase 2 read-only Guardian report and Phase 3 selected-source local snapshots / optional encrypted OneDrive copy is implemented. See `docs/GUARDIAN_AND_VAULT.md` for commands, regression coverage and remaining live gates. The vault user timer is packaged but disabled. A fast pinned-runner CI workflow now validates source on pushes and pull requests without launching the ISO build.
 
 All installed-machine checkboxes above remain unchanged. This batch does not establish installed deployment, live OneDrive authentication, voice enrollment or encrypted boot qualification.
+
+## GitHub implementation batch: workspace launchers
+
+Native Studio, separate Author launcher, shared media resolution and Media Center naming are synchronized from the authoritative repository. See `docs/WORKSPACE_LAUNCHER_REPAIRS.md`. Installed/live packaging and qualification remain the responsibility of `spider-narive-os`; installed checkboxes remain unchecked.

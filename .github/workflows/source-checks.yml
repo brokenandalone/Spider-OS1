@@ -11,6 +11,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
+      - name: Install desktop test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pyqt5 dbus-bin
       - name: Guardian and vault recovery regression tests
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Validate system tool syntax
@@ -18,3 +22,8 @@ jobs:
           bash -n system/bin/spider-guardian
           bash -n system/bin/spider-vault
           python3 -m py_compile system/guardian.py system/vault.py
+      - name: Native workspace smoke test
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_ACCESSIBILITY: '0'
+        run: timeout --kill-after=5 120 dbus-run-session -- python3 -u tests/check-workspace-ui.py

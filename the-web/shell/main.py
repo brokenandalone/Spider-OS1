@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import shutil
+from pathlib import Path
 
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
@@ -19,7 +20,12 @@ from PyQt5.QtWidgets import (
 )
 
 
-SPIDER_ROOT = "/usr/local/lib/spider-os"
+SPIDER_ROOT = Path('/usr/local/lib/spider-os')
+if not SPIDER_ROOT.exists():
+    SPIDER_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(SPIDER_ROOT / 'system'))
+from apps import AppUnavailable, launch_author as launch_author_native, media_command, studio_command
+
 
 
 class SpiderButton(QPushButton):
@@ -101,7 +107,8 @@ class TheWeb(QMainWindow):
 
         side.addWidget(SpiderButton("Webbie", self.show_webbie))
         side.addWidget(SpiderButton("Studio", self.launch_studio))
-        side.addWidget(SpiderButton("Spider Media Player", self.launch_media))
+        side.addWidget(SpiderButton("Author", self.launch_author))
+        side.addWidget(SpiderButton("Spider Media Center", self.launch_media))
         side.addWidget(SpiderButton("Forage", self.launch_forage))
         side.addWidget(SpiderButton("Deep Forage", self.launch_deep_forage))
         side.addWidget(SpiderButton("Kali Bay", self.launch_kali_bay))
@@ -166,14 +173,12 @@ class TheWeb(QMainWindow):
 
         command += ["is-active", service]
 
-        result = subprocess.run(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-        )
-
-        return result.stdout.strip() == "active"
+        try:
+            result = subprocess.run(command, stdout=subprocess.PIPE,
+                                    stderr=subprocess.DEVNULL, text=True, timeout=2)
+            return result.stdout.strip() == 'active'
+        except (OSError, subprocess.TimeoutExpired):
+            return False
 
     def update_status(self):
         webbie = self.service_active("webbie.service", user=True)
@@ -204,23 +209,22 @@ class TheWeb(QMainWindow):
         )
 
     def launch_studio(self):
-        path = os.path.join(SPIDER_ROOT, "studio", "main.py")
-        if os.path.exists(path):
-            self.launch(["python3", path])
-        else:
-            self.status.setText("Spider Studio is not installed.")
+        try:
+            self.launch(studio_command(SPIDER_ROOT))
+        except AppUnavailable as error:
+            self.status.setText(str(error))
+
+    def launch_author(self):
+        try:
+            launch_author_native()
+        except (AppUnavailable, OSError) as error:
+            self.status.setText(str(error))
 
     def launch_media(self):
-        command = shutil.which("spider-media-player")
-        if command:
-            self.launch([command])
-            return
-
-        path = "/opt/spider-media-player/spider-media-player"
-        if os.path.isfile(path) and os.access(path, os.X_OK):
-            self.launch([path])
-        else:
-            self.status.setText("Spider Media Player is not installed.")
+        try:
+            self.launch(media_command())
+        except AppUnavailable as error:
+            self.status.setText(str(error))
 
     def launch_forage(self):
         path = os.path.join(SPIDER_ROOT, "forage", "forage.py")
